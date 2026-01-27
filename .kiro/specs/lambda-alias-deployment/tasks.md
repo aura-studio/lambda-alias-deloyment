@@ -14,6 +14,7 @@
     - _需求: 1.1, 1.2, 1.4, 1.5_
   - [x] 1.2 创建目录结构
     - 创建 cmd/、internal/aws/、internal/config/、internal/patcher/、internal/output/、internal/exitcode/ 目录
+    - 创建 tests/cmd/、tests/internal/aws/、tests/internal/config/、tests/internal/patcher/ 测试目录
     - _需求: 1.1_
 
 - [x] 2. 实现基础模块
@@ -26,6 +27,7 @@
     - 其他输出到 stdout
     - _需求: 12.5, 12.6_
   - [x] 2.3 编写属性测试：输出流分离
+    - 测试文件位置: tests/printer_test.go
     - **Property 10: 输出流分离**
     - **Validates: Requirements 12.5, 12.6**
 
@@ -36,6 +38,7 @@
     - 实现 GetFunctionName 根据 stack_name 和 env 生成函数名
     - _需求: 3.1, 3.2, 3.5, 13.2_
   - [x] 3.2 编写属性测试：SAMConfig 解析
+    - 测试文件位置: tests/samconfig_test.go
     - **Property 2: SAMConfig 解析**
     - **Validates: Requirements 3.1, 3.2, 3.5, 13.2**
 
@@ -53,6 +56,7 @@
     - 实现 VerifyVersionExists 验证版本存在
     - _需求: 4.1-4.6, 5.4-5.6, 6.1-6.5, 7.1-7.3, 8.3-8.6, 9.1-9.3_
   - [x] 4.3 编写属性测试：错误分类
+    - 测试文件位置: tests/lambda_test.go
     - **Property 9: 错误分类和退出码**
     - **Validates: Requirements 12.1**
 
@@ -71,6 +75,7 @@
     - 调用 cmd.Execute()
     - _需求: 1.3_
   - [x] 6.3 编写属性测试：环境参数验证
+    - 测试文件位置: tests/root_test.go
     - **Property 1: 环境参数验证**
     - **Validates: Requirements 2.1, 2.3**
 
@@ -80,6 +85,7 @@
     - 实现 Weight、IsValid、NextStrategy 方法
     - _需求: 5.2_
   - [x] 7.2 编写属性测试：灰度策略验证
+    - 测试文件位置: tests/strategy_test.go
     - **Property 3: 灰度策略验证**
     - **Validates: Requirements 5.2, 5.3**
 
@@ -98,6 +104,7 @@
     - 显示流量分配和下一步提示
     - _需求: 5.1-5.9_
   - [x] 8.3 编写属性测试：auto-promote 参数验证
+    - 测试文件位置: tests/strategy_test.go
     - **Property 4: auto-promote 参数验证**
     - **Validates: Requirements 5.8**
   - [x] 8.4 实现 promote 命令 (cmd/promote.go)
@@ -116,6 +123,7 @@
     - 显示回退结果
     - _需求: 7.1-7.8_
   - [x] 8.6 编写属性测试：回退日志格式
+    - 测试文件位置: tests/rollback_test.go
     - **Property 5: 回退日志格式**
     - **Validates: Requirements 7.4, 7.5**
   - [x] 8.7 实现 switch 命令 (cmd/switch.go)
@@ -146,9 +154,11 @@
     - 实现 Patch 主函数
     - _需求: 10.2-10.16_
   - [x] 10.2 编写属性测试：模板验证
+    - 测试文件位置: tests/patch_test.go
     - **Property 6: 模板验证**
     - **Validates: Requirements 10.2**
   - [x] 10.3 编写属性测试：补丁内容生成
+    - 测试文件位置: tests/patch_test.go
     - **Property 7: 补丁内容生成**
     - **Validates: Requirements 10.8**
   - [x] 10.4 实现 unpatch 逻辑 (internal/patcher/unpatch.go)
@@ -157,10 +167,11 @@
     - 实现 Unpatch 主函数
     - _需求: 11.2-11.8_
   - [x] 10.5 编写属性测试：移除补丁标记内容
+    - 测试文件位置: tests/unpatch_test.go
     - **Property 8: 移除补丁标记内容**
     - **Validates: Requirements 11.3**
 
-- [ ] 11. 实现 patch 和 unpatch 命令
+- [x] 11. 实现 patch 和 unpatch 命令
   - [x] 11.1 实现 patch 命令 (cmd/patch.go)
     - 解析 --template、--function、--dry-run 参数
     - 调用 patcher.Patch
@@ -188,9 +199,27 @@
   - 确保所有功能正常工作
   - 如有问题请询问用户
 
+- [x] 15. 重构测试文件目录结构
+  - [x] 15.1 创建 tests 目录
+    - 创建 tests/ 目录（所有测试文件直接放在此目录下，不保留层级）
+  - [x] 15.2 移动所有测试文件到 tests 目录
+    - 移动 cmd/root_test.go 到 tests/root_test.go
+    - 移动 cmd/rollback_test.go 到 tests/rollback_test.go
+    - 移动 cmd/strategy_test.go 到 tests/strategy_test.go
+    - 移动 internal/aws/lambda_test.go 到 tests/lambda_test.go
+    - 移动 internal/config/samconfig_test.go 到 tests/samconfig_test.go
+    - 移动 internal/patcher/patch_test.go 到 tests/patch_test.go
+    - 移动 internal/patcher/unpatch_test.go 到 tests/unpatch_test.go
+    - 所有测试文件使用 package tests 声明
+    - 更新 import 路径引用源代码包
+  - [x] 15.3 验证测试
+    - 运行 go test ./tests 确保所有测试通过
+    - 删除原位置的测试文件
+
 ## 备注
 
 - 属性测试使用 rapid 库，每个测试运行至少 100 次迭代
 - 集成测试需要 mock AWS API，可在后续迭代中添加
 - 测试标签格式：**Feature: lambda-alias-deployment, Property N: {property_text}**
-
+- 所有测试文件统一放置在 tests/ 目录下，不保留层级结构
+- 运行测试命令：`go test ./tests`

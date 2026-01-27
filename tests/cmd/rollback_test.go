@@ -1,4 +1,4 @@
-package cmd
+package cmd_test
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aura-studio/lambda-alias-deployment/cmd"
 	"pgregory.net/rapid"
 )
 
@@ -17,12 +18,12 @@ import (
 func TestRollbackLog_Format(t *testing.T) {
 	tests := []struct {
 		name     string
-		log      RollbackLog
+		log      cmd.RollbackLog
 		contains []string
 	}{
 		{
 			name: "basic format with all fields",
-			log: RollbackLog{
+			log: cmd.RollbackLog{
 				Timestamp:   time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
 				Env:         "test",
 				FromVersion: "5",
@@ -41,7 +42,7 @@ func TestRollbackLog_Format(t *testing.T) {
 		},
 		{
 			name: "format with prod environment",
-			log: RollbackLog{
+			log: cmd.RollbackLog{
 				Timestamp:   time.Date(2024, 6, 20, 15, 45, 30, 0, time.UTC),
 				Env:         "prod",
 				FromVersion: "10",
@@ -59,7 +60,7 @@ func TestRollbackLog_Format(t *testing.T) {
 		},
 		{
 			name: "format with default reason",
-			log: RollbackLog{
+			log: cmd.RollbackLog{
 				Timestamp:   time.Date(2024, 3, 10, 8, 0, 0, 0, time.UTC),
 				Env:         "test",
 				FromVersion: "3",
@@ -73,7 +74,7 @@ func TestRollbackLog_Format(t *testing.T) {
 		},
 		{
 			name: "format with empty operator",
-			log: RollbackLog{
+			log: cmd.RollbackLog{
 				Timestamp:   time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC),
 				Env:         "test",
 				FromVersion: "100",
@@ -100,7 +101,7 @@ func TestRollbackLog_Format(t *testing.T) {
 }
 
 func TestRollbackLog_Format_Structure(t *testing.T) {
-	log := RollbackLog{
+	log := cmd.RollbackLog{
 		Timestamp:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Env:         "test",
 		FromVersion: "2",
@@ -313,6 +314,7 @@ func TestProperty5_RollbackLogFormat(t *testing.T) {
 			// Expected pattern: [timestamp] ENV=env FROM_VERSION=from TO_VERSION=to REASON="reason" OPERATOR=operator
 			// Note: We use a flexible pattern to match various field values
 			pattern := `^\[.+\] ENV=\S+ FROM_VERSION=\S+ TO_VERSION=\S+ REASON=".*" OPERATOR=\S+$`
+
 			matched, err := regexp.MatchString(pattern, result)
 			if err != nil {
 				t.Fatalf("Regex error: %v", err)
@@ -330,7 +332,7 @@ func TestProperty5_RollbackLogFormat(t *testing.T) {
 			envs := []string{"test", "prod"}
 			env := rapid.SampledFrom(envs).Draw(t, "env")
 
-			log := RollbackLog{
+			log := cmd.RollbackLog{
 				Timestamp:   generateTimestamp(t),
 				Env:         env,
 				FromVersion: generateVersion(t),
@@ -355,7 +357,7 @@ func TestProperty5_RollbackLogFormat(t *testing.T) {
 			fromVersion := generateVersion(t)
 			toVersion := generateVersion(t)
 
-			log := RollbackLog{
+			log := cmd.RollbackLog{
 				Timestamp:   generateTimestamp(t),
 				Env:         "test",
 				FromVersion: fromVersion,
@@ -382,8 +384,8 @@ func TestProperty5_RollbackLogFormat(t *testing.T) {
 // =============================================================================
 
 // generateRollbackLog generates a random RollbackLog for property testing
-func generateRollbackLog(t *rapid.T) RollbackLog {
-	return RollbackLog{
+func generateRollbackLog(t *rapid.T) cmd.RollbackLog {
+	return cmd.RollbackLog{
 		Timestamp:   generateTimestamp(t),
 		Env:         generateEnv(t),
 		FromVersion: generateVersion(t),

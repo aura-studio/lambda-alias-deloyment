@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/internal/config"
 	"pgregory.net/rapid"
 )
 
@@ -40,26 +41,26 @@ profile = "%s"
 		}
 
 		// Load and parse the config
-		config, err := LoadSAMConfig(configPath)
+		cfg, err := config.LoadSAMConfig(configPath)
 		if err != nil {
 			rt.Fatalf("LoadSAMConfig failed: %v", err)
 		}
 
 		// Property: stack_name should be correctly extracted
-		gotStackName := config.GetStackName(env)
+		gotStackName := cfg.GetStackName(env)
 		if gotStackName != stackName {
 			rt.Fatalf("GetStackName(%q) = %q, want %q", env, gotStackName, stackName)
 		}
 
 		// Property: profile should be correctly extracted
-		gotProfile := config.GetProfile(env)
+		gotProfile := cfg.GetProfile(env)
 		if gotProfile != profile {
 			rt.Fatalf("GetProfile(%q) = %q, want %q", env, gotProfile, profile)
 		}
 
 		// Property: function name should follow the format {stack_name}-function-default
 		expectedFunctionName := fmt.Sprintf("%s-function-default", stackName)
-		gotFunctionName := config.GetFunctionName(env)
+		gotFunctionName := cfg.GetFunctionName(env)
 		if gotFunctionName != expectedFunctionName {
 			rt.Fatalf("GetFunctionName(%q) = %q, want %q", env, gotFunctionName, expectedFunctionName)
 		}
@@ -91,19 +92,19 @@ stack_name = "%s"
 			rt.Fatalf("Failed to write config file: %v", err)
 		}
 
-		config, err := LoadSAMConfig(configPath)
+		cfg, err := config.LoadSAMConfig(configPath)
 		if err != nil {
 			rt.Fatalf("LoadSAMConfig failed: %v", err)
 		}
 
 		// Property: querying non-existent env should return empty strings
-		if got := config.GetStackName(queriedEnv); got != "" {
+		if got := cfg.GetStackName(queriedEnv); got != "" {
 			rt.Fatalf("GetStackName(%q) = %q, want empty string", queriedEnv, got)
 		}
-		if got := config.GetProfile(queriedEnv); got != "" {
+		if got := cfg.GetProfile(queriedEnv); got != "" {
 			rt.Fatalf("GetProfile(%q) = %q, want empty string", queriedEnv, got)
 		}
-		if got := config.GetFunctionName(queriedEnv); got != "" {
+		if got := cfg.GetFunctionName(queriedEnv); got != "" {
 			rt.Fatalf("GetFunctionName(%q) = %q, want empty string", queriedEnv, got)
 		}
 	})
@@ -111,7 +112,7 @@ stack_name = "%s"
 
 // TestLoadSAMConfig_FileNotFound tests error handling for missing file
 func TestLoadSAMConfig_FileNotFound(t *testing.T) {
-	_, err := LoadSAMConfig("/nonexistent/path/samconfig.toml")
+	_, err := config.LoadSAMConfig("/nonexistent/path/samconfig.toml")
 	if err == nil {
 		t.Error("LoadSAMConfig should return error for non-existent file")
 	}
@@ -128,7 +129,7 @@ func TestLoadSAMConfig_InvalidTOML(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	_, err = LoadSAMConfig(configPath)
+	_, err = config.LoadSAMConfig(configPath)
 	if err == nil {
 		t.Error("LoadSAMConfig should return error for invalid TOML")
 	}

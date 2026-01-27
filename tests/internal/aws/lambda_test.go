@@ -1,10 +1,11 @@
-package aws
+package aws_test
 
 import (
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/internal/aws"
 	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
 	"pgregory.net/rapid"
 )
@@ -104,9 +105,9 @@ func TestClassifyError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := classifyError(tt.err)
+			result := aws.ClassifyError(tt.err)
 			if result != tt.expected {
-				t.Errorf("classifyError(%v) = %d, want %d", tt.err, result, tt.expected)
+				t.Errorf("ClassifyError(%v) = %d, want %d", tt.err, result, tt.expected)
 			}
 		})
 	}
@@ -151,9 +152,9 @@ func TestProperty_ErrorClassificationAndExitCode(t *testing.T) {
 			errMsg := fmt.Sprintf("%s%s%s", prefix, keyword, suffix)
 			err := errors.New(errMsg)
 
-			result := classifyError(err)
+			result := aws.ClassifyError(err)
 			if result != exitcode.NetworkError {
-				t.Fatalf("classifyError(%q) = %d, want %d (NetworkError)", errMsg, result, exitcode.NetworkError)
+				t.Fatalf("ClassifyError(%q) = %d, want %d (NetworkError)", errMsg, result, exitcode.NetworkError)
 			}
 		})
 	})
@@ -173,9 +174,9 @@ func TestProperty_ErrorClassificationAndExitCode(t *testing.T) {
 			errMsg := fmt.Sprintf("%s%s%s", prefix, keyword, suffix)
 			err := errors.New(errMsg)
 
-			result := classifyError(err)
+			result := aws.ClassifyError(err)
 			if result != exitcode.ResourceNotFound {
-				t.Fatalf("classifyError(%q) = %d, want %d (ResourceNotFound)", errMsg, result, exitcode.ResourceNotFound)
+				t.Fatalf("ClassifyError(%q) = %d, want %d (ResourceNotFound)", errMsg, result, exitcode.ResourceNotFound)
 			}
 		})
 	})
@@ -190,9 +191,9 @@ func TestProperty_ErrorClassificationAndExitCode(t *testing.T) {
 			// Ensure the message doesn't contain any network or resource not found keywords
 			err := errors.New(errMsg)
 
-			result := classifyError(err)
+			result := aws.ClassifyError(err)
 			if result != exitcode.AWSError {
-				t.Fatalf("classifyError(%q) = %d, want %d (AWSError)", errMsg, result, exitcode.AWSError)
+				t.Fatalf("ClassifyError(%q) = %d, want %d (AWSError)", errMsg, result, exitcode.AWSError)
 			}
 		})
 	})
@@ -218,18 +219,18 @@ func TestProperty_ErrorClassificationAndExitCode(t *testing.T) {
 			errMsg := string(modifiedKeyword)
 			err := errors.New(errMsg)
 
-			result := classifyError(err)
+			result := aws.ClassifyError(err)
 			if result != exitcode.NetworkError {
-				t.Fatalf("classifyError(%q) = %d, want %d (NetworkError) - case insensitivity failed", errMsg, result, exitcode.NetworkError)
+				t.Fatalf("ClassifyError(%q) = %d, want %d (NetworkError) - case insensitivity failed", errMsg, result, exitcode.NetworkError)
 			}
 		})
 	})
 
 	// Property 9.5: nil error should return exit code 0 (Success)
 	t.Run("NilError", func(t *testing.T) {
-		result := classifyError(nil)
+		result := aws.ClassifyError(nil)
 		if result != exitcode.Success {
-			t.Fatalf("classifyError(nil) = %d, want %d (Success)", result, exitcode.Success)
+			t.Fatalf("ClassifyError(nil) = %d, want %d (Success)", result, exitcode.Success)
 		}
 	})
 
@@ -247,10 +248,10 @@ func TestProperty_ErrorClassificationAndExitCode(t *testing.T) {
 			errMsg := fmt.Sprintf("%s and %s", networkKeyword, resourceKeyword)
 			err := errors.New(errMsg)
 
-			result := classifyError(err)
+			result := aws.ClassifyError(err)
 			// Network keywords are checked first, so should return NetworkError
 			if result != exitcode.NetworkError {
-				t.Fatalf("classifyError(%q) = %d, want %d (NetworkError) - network should take precedence", errMsg, result, exitcode.NetworkError)
+				t.Fatalf("ClassifyError(%q) = %d, want %d (NetworkError) - network should take precedence", errMsg, result, exitcode.NetworkError)
 			}
 		})
 	})

@@ -39,10 +39,10 @@ func NewClient(ctx context.Context, profile string) (*Client, error) {
 	return &Client{client: lambdaClient}, nil
 }
 
-// classifyError 根据错误信息分类返回退出码
+// ClassifyError 根据错误信息分类返回退出码
 // 网络错误关键词: unable to locate credentials, could not connect, connection refused, network, timeout, timed out, unreachable
 // 资源不存在关键词: resourcenotfoundexception, does not exist, not found, cannot find
-func classifyError(err error) int {
+func ClassifyError(err error) int {
 	if err == nil {
 		return exitcode.Success
 	}
@@ -108,7 +108,7 @@ func (c *Client) GetAliasVersion(ctx context.Context, functionName, aliasName st
 
 	result, err := c.client.GetAlias(ctx, input)
 	if err != nil {
-		exitCode := classifyError(err)
+		exitCode := ClassifyError(err)
 		output.Error("%v", err)
 		return "", exitCode
 	}
@@ -131,7 +131,7 @@ func (c *Client) UpdateAlias(ctx context.Context, functionName, aliasName, versi
 
 	_, err := c.client.UpdateAlias(ctx, input)
 	if err != nil {
-		exitCode := classifyError(err)
+		exitCode := ClassifyError(err)
 		output.Error("%v", err)
 		return exitCode
 	}
@@ -156,7 +156,7 @@ func (c *Client) ConfigureCanary(ctx context.Context, functionName, aliasName, m
 
 	_, err := c.client.UpdateAlias(ctx, input)
 	if err != nil {
-		exitCode := classifyError(err)
+		exitCode := ClassifyError(err)
 		output.Error("%v", err)
 		return exitCode
 	}
@@ -202,7 +202,7 @@ func (c *Client) VerifyVersionExists(ctx context.Context, functionName, version 
 
 	_, err := c.client.GetFunction(ctx, input)
 	if err != nil {
-		exitCode := classifyError(err)
+		exitCode := ClassifyError(err)
 		output.Error("%v", err)
 		return exitCode
 	}

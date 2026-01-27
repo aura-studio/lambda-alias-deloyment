@@ -1,45 +1,46 @@
-package cmd
+package cmd_test
 
 import (
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/cmd"
 	"pgregory.net/rapid"
 )
 
 func TestCanaryStrategy_Weight(t *testing.T) {
 	tests := []struct {
 		name     string
-		strategy CanaryStrategy
+		strategy cmd.CanaryStrategy
 		want     float64
 	}{
 		{
 			name:     "canary10 returns 0.10",
-			strategy: Canary10,
+			strategy: cmd.Canary10,
 			want:     0.10,
 		},
 		{
 			name:     "canary25 returns 0.25",
-			strategy: Canary25,
+			strategy: cmd.Canary25,
 			want:     0.25,
 		},
 		{
 			name:     "canary50 returns 0.50",
-			strategy: Canary50,
+			strategy: cmd.Canary50,
 			want:     0.50,
 		},
 		{
 			name:     "canary75 returns 0.75",
-			strategy: Canary75,
+			strategy: cmd.Canary75,
 			want:     0.75,
 		},
 		{
 			name:     "invalid strategy returns 0",
-			strategy: CanaryStrategy("invalid"),
+			strategy: cmd.CanaryStrategy("invalid"),
 			want:     0,
 		},
 		{
 			name:     "empty strategy returns 0",
-			strategy: CanaryStrategy(""),
+			strategy: cmd.CanaryStrategy(""),
 			want:     0,
 		},
 	}
@@ -57,47 +58,47 @@ func TestCanaryStrategy_Weight(t *testing.T) {
 func TestCanaryStrategy_IsValid(t *testing.T) {
 	tests := []struct {
 		name     string
-		strategy CanaryStrategy
+		strategy cmd.CanaryStrategy
 		want     bool
 	}{
 		{
 			name:     "canary10 is valid",
-			strategy: Canary10,
+			strategy: cmd.Canary10,
 			want:     true,
 		},
 		{
 			name:     "canary25 is valid",
-			strategy: Canary25,
+			strategy: cmd.Canary25,
 			want:     true,
 		},
 		{
 			name:     "canary50 is valid",
-			strategy: Canary50,
+			strategy: cmd.Canary50,
 			want:     true,
 		},
 		{
 			name:     "canary75 is valid",
-			strategy: Canary75,
+			strategy: cmd.Canary75,
 			want:     true,
 		},
 		{
 			name:     "invalid strategy is not valid",
-			strategy: CanaryStrategy("invalid"),
+			strategy: cmd.CanaryStrategy("invalid"),
 			want:     false,
 		},
 		{
 			name:     "empty strategy is not valid",
-			strategy: CanaryStrategy(""),
+			strategy: cmd.CanaryStrategy(""),
 			want:     false,
 		},
 		{
 			name:     "canary100 is not valid",
-			strategy: CanaryStrategy("canary100"),
+			strategy: cmd.CanaryStrategy("canary100"),
 			want:     false,
 		},
 		{
 			name:     "CANARY10 (uppercase) is not valid",
-			strategy: CanaryStrategy("CANARY10"),
+			strategy: cmd.CanaryStrategy("CANARY10"),
 			want:     false,
 		},
 	}
@@ -115,38 +116,38 @@ func TestCanaryStrategy_IsValid(t *testing.T) {
 func TestCanaryStrategy_NextStrategy(t *testing.T) {
 	tests := []struct {
 		name     string
-		strategy CanaryStrategy
-		want     CanaryStrategy
+		strategy cmd.CanaryStrategy
+		want     cmd.CanaryStrategy
 	}{
 		{
 			name:     "canary10 -> canary25",
-			strategy: Canary10,
-			want:     Canary25,
+			strategy: cmd.Canary10,
+			want:     cmd.Canary25,
 		},
 		{
 			name:     "canary25 -> canary50",
-			strategy: Canary25,
-			want:     Canary50,
+			strategy: cmd.Canary25,
+			want:     cmd.Canary50,
 		},
 		{
 			name:     "canary50 -> canary75",
-			strategy: Canary50,
-			want:     Canary75,
+			strategy: cmd.Canary50,
+			want:     cmd.Canary75,
 		},
 		{
 			name:     "canary75 -> canary75 (stays at max)",
-			strategy: Canary75,
-			want:     Canary75,
+			strategy: cmd.Canary75,
+			want:     cmd.Canary75,
 		},
 		{
 			name:     "invalid strategy -> canary10",
-			strategy: CanaryStrategy("invalid"),
-			want:     Canary10,
+			strategy: cmd.CanaryStrategy("invalid"),
+			want:     cmd.Canary10,
 		},
 		{
 			name:     "empty strategy -> canary10",
-			strategy: CanaryStrategy(""),
-			want:     Canary10,
+			strategy: cmd.CanaryStrategy(""),
+			want:     cmd.Canary10,
 		},
 	}
 
@@ -162,20 +163,20 @@ func TestCanaryStrategy_NextStrategy(t *testing.T) {
 
 func TestAllStrategies(t *testing.T) {
 	// Verify AllStrategies contains all valid strategies
-	expected := []CanaryStrategy{Canary10, Canary25, Canary50, Canary75}
+	expected := []cmd.CanaryStrategy{cmd.Canary10, cmd.Canary25, cmd.Canary50, cmd.Canary75}
 
-	if len(AllStrategies) != len(expected) {
-		t.Errorf("AllStrategies has %d elements, want %d", len(AllStrategies), len(expected))
+	if len(cmd.AllStrategies) != len(expected) {
+		t.Errorf("AllStrategies has %d elements, want %d", len(cmd.AllStrategies), len(expected))
 	}
 
 	for i, s := range expected {
-		if AllStrategies[i] != s {
-			t.Errorf("AllStrategies[%d] = %v, want %v", i, AllStrategies[i], s)
+		if cmd.AllStrategies[i] != s {
+			t.Errorf("AllStrategies[%d] = %v, want %v", i, cmd.AllStrategies[i], s)
 		}
 	}
 
 	// Verify all strategies in AllStrategies are valid
-	for _, s := range AllStrategies {
+	for _, s := range cmd.AllStrategies {
 		if !s.IsValid() {
 			t.Errorf("Strategy %v in AllStrategies is not valid", s)
 		}
@@ -184,7 +185,7 @@ func TestAllStrategies(t *testing.T) {
 
 func TestCanaryStrategy_WeightConsistency(t *testing.T) {
 	// Verify that weights are in ascending order
-	strategies := []CanaryStrategy{Canary10, Canary25, Canary50, Canary75}
+	strategies := []cmd.CanaryStrategy{cmd.Canary10, cmd.Canary25, cmd.Canary50, cmd.Canary75}
 	expectedWeights := []float64{0.10, 0.25, 0.50, 0.75}
 
 	for i, s := range strategies {
@@ -226,8 +227,8 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 	t.Run("valid_strategies_return_correct_weights", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random valid strategy from the list
-			strategyIndex := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "strategyIndex")
-			strategy := AllStrategies[strategyIndex]
+			strategyIndex := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "strategyIndex")
+			strategy := cmd.AllStrategies[strategyIndex]
 
 			// Verify the strategy is valid
 			if !strategy.IsValid() {
@@ -248,7 +249,7 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random string that is NOT a valid strategy
 			randomStr := rapid.StringMatching(`[a-zA-Z0-9_-]{0,20}`).Draw(t, "randomStr")
-			strategy := CanaryStrategy(randomStr)
+			strategy := cmd.CanaryStrategy(randomStr)
 
 			// Skip if we accidentally generated a valid strategy
 			if _, isValid := validStrategies[randomStr]; isValid {
@@ -271,11 +272,11 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 	t.Run("valid_strategy_weight_mapping_is_bijective", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate two random valid strategies
-			idx1 := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "idx1")
-			idx2 := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "idx2")
+			idx1 := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "idx1")
+			idx2 := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "idx2")
 
-			s1 := AllStrategies[idx1]
-			s2 := AllStrategies[idx2]
+			s1 := cmd.AllStrategies[idx1]
+			s2 := cmd.AllStrategies[idx2]
 
 			// If strategies are different, their weights should be different
 			if s1 != s2 && s1.Weight() == s2.Weight() {
@@ -294,8 +295,8 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 	t.Run("weights_are_within_valid_range", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random valid strategy
-			strategyIndex := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "strategyIndex")
-			strategy := AllStrategies[strategyIndex]
+			strategyIndex := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "strategyIndex")
+			strategy := cmd.AllStrategies[strategyIndex]
 
 			weight := strategy.Weight()
 
@@ -316,11 +317,11 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random string
 			randomStr := rapid.String().Draw(t, "randomStr")
-			strategy := CanaryStrategy(randomStr)
+			strategy := cmd.CanaryStrategy(randomStr)
 
 			// Check if it's in AllStrategies
 			inAllStrategies := false
-			for _, s := range AllStrategies {
+			for _, s := range cmd.AllStrategies {
 				if s == strategy {
 					inAllStrategies = true
 					break
@@ -348,79 +349,79 @@ func TestProperty3_CanaryStrategyValidation(t *testing.T) {
 func TestValidateAutoPromote(t *testing.T) {
 	tests := []struct {
 		name        string
-		strategy    CanaryStrategy
+		strategy    cmd.CanaryStrategy
 		autoPromote bool
 		wantErr     bool
 	}{
 		{
 			name:        "canary75 with auto-promote should succeed",
-			strategy:    Canary75,
+			strategy:    cmd.Canary75,
 			autoPromote: true,
 			wantErr:     false,
 		},
 		{
 			name:        "canary75 without auto-promote should succeed",
-			strategy:    Canary75,
+			strategy:    cmd.Canary75,
 			autoPromote: false,
 			wantErr:     false,
 		},
 		{
 			name:        "canary10 with auto-promote should fail",
-			strategy:    Canary10,
+			strategy:    cmd.Canary10,
 			autoPromote: true,
 			wantErr:     true,
 		},
 		{
 			name:        "canary10 without auto-promote should succeed",
-			strategy:    Canary10,
+			strategy:    cmd.Canary10,
 			autoPromote: false,
 			wantErr:     false,
 		},
 		{
 			name:        "canary25 with auto-promote should fail",
-			strategy:    Canary25,
+			strategy:    cmd.Canary25,
 			autoPromote: true,
 			wantErr:     true,
 		},
 		{
 			name:        "canary25 without auto-promote should succeed",
-			strategy:    Canary25,
+			strategy:    cmd.Canary25,
 			autoPromote: false,
 			wantErr:     false,
 		},
 		{
 			name:        "canary50 with auto-promote should fail",
-			strategy:    Canary50,
+			strategy:    cmd.Canary50,
 			autoPromote: true,
 			wantErr:     true,
 		},
 		{
 			name:        "canary50 without auto-promote should succeed",
-			strategy:    Canary50,
+			strategy:    cmd.Canary50,
 			autoPromote: false,
 			wantErr:     false,
 		},
 		{
 			name:        "invalid strategy with auto-promote should fail",
-			strategy:    CanaryStrategy("invalid"),
+			strategy:    cmd.CanaryStrategy("invalid"),
 			autoPromote: true,
 			wantErr:     true,
 		},
 		{
 			name:        "invalid strategy without auto-promote should succeed",
-			strategy:    CanaryStrategy("invalid"),
+			strategy:    cmd.CanaryStrategy("invalid"),
 			autoPromote: false,
 			wantErr:     false,
 		},
 		{
 			name:        "empty strategy with auto-promote should fail",
-			strategy:    CanaryStrategy(""),
+			strategy:    cmd.CanaryStrategy(""),
 			autoPromote: true,
 			wantErr:     true,
 		},
 		{
 			name:        "empty strategy without auto-promote should succeed",
-			strategy:    CanaryStrategy(""),
+			strategy:    cmd.CanaryStrategy(""),
 			autoPromote: false,
 			wantErr:     false,
 		},
@@ -428,7 +429,7 @@ func TestValidateAutoPromote(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateAutoPromote(tt.strategy, tt.autoPromote)
+			err := cmd.ValidateAutoPromote(tt.strategy, tt.autoPromote)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateAutoPromote(%q, %v) error = %v, wantErr %v",
 					tt.strategy, tt.autoPromote, err, tt.wantErr)
@@ -447,7 +448,7 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 	t.Run("auto_promote_with_canary75_succeeds", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Always use canary75 strategy with auto-promote=true
-			err := ValidateAutoPromote(Canary75, true)
+			err := cmd.ValidateAutoPromote(cmd.Canary75, true)
 			if err != nil {
 				t.Fatalf("ValidateAutoPromote(Canary75, true) should succeed, got error: %v", err)
 			}
@@ -458,16 +459,16 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 	t.Run("auto_promote_with_non_canary75_fails", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a strategy that is NOT canary75
-			nonCanary75Strategies := []CanaryStrategy{Canary10, Canary25, Canary50}
+			nonCanary75Strategies := []cmd.CanaryStrategy{cmd.Canary10, cmd.Canary25, cmd.Canary50}
 			strategy := rapid.SampledFrom(nonCanary75Strategies).Draw(t, "strategy")
 
-			err := ValidateAutoPromote(strategy, true)
+			err := cmd.ValidateAutoPromote(strategy, true)
 			if err == nil {
 				t.Fatalf("ValidateAutoPromote(%q, true) should fail for non-canary75 strategy, but got no error", strategy)
 			}
 
 			// Verify the error is the expected one
-			if err != ErrAutoPromoteOnlyCanary75 {
+			if err != cmd.ErrAutoPromoteOnlyCanary75 {
 				t.Fatalf("ValidateAutoPromote(%q, true) should return ErrAutoPromoteOnlyCanary75, got: %v", strategy, err)
 			}
 		})
@@ -477,10 +478,10 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 	t.Run("without_auto_promote_any_strategy_succeeds", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate any valid strategy
-			strategyIndex := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "strategyIndex")
-			strategy := AllStrategies[strategyIndex]
+			strategyIndex := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "strategyIndex")
+			strategy := cmd.AllStrategies[strategyIndex]
 
-			err := ValidateAutoPromote(strategy, false)
+			err := cmd.ValidateAutoPromote(strategy, false)
 			if err != nil {
 				t.Fatalf("ValidateAutoPromote(%q, false) should succeed, got error: %v", strategy, err)
 			}
@@ -492,14 +493,14 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random string that is NOT canary75
 			randomStr := rapid.StringMatching(`[a-zA-Z0-9_-]{0,20}`).Draw(t, "randomStr")
-			strategy := CanaryStrategy(randomStr)
+			strategy := cmd.CanaryStrategy(randomStr)
 
 			// Skip if we accidentally generated canary75
-			if strategy == Canary75 {
+			if strategy == cmd.Canary75 {
 				return
 			}
 
-			err := ValidateAutoPromote(strategy, true)
+			err := cmd.ValidateAutoPromote(strategy, true)
 			if err == nil {
 				t.Fatalf("ValidateAutoPromote(%q, true) should fail for non-canary75 strategy, but got no error", strategy)
 			}
@@ -511,9 +512,9 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a random string (could be valid or invalid strategy)
 			randomStr := rapid.StringMatching(`[a-zA-Z0-9_-]{0,20}`).Draw(t, "randomStr")
-			strategy := CanaryStrategy(randomStr)
+			strategy := cmd.CanaryStrategy(randomStr)
 
-			err := ValidateAutoPromote(strategy, false)
+			err := cmd.ValidateAutoPromote(strategy, false)
 			if err != nil {
 				t.Fatalf("ValidateAutoPromote(%q, false) should succeed regardless of strategy validity, got error: %v", strategy, err)
 			}
@@ -524,13 +525,13 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 	t.Run("validation_is_deterministic", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate random strategy and autoPromote value
-			strategyIndex := rapid.IntRange(0, len(AllStrategies)-1).Draw(t, "strategyIndex")
-			strategy := AllStrategies[strategyIndex]
+			strategyIndex := rapid.IntRange(0, len(cmd.AllStrategies)-1).Draw(t, "strategyIndex")
+			strategy := cmd.AllStrategies[strategyIndex]
 			autoPromote := rapid.Bool().Draw(t, "autoPromote")
 
 			// Call the function twice with the same inputs
-			err1 := ValidateAutoPromote(strategy, autoPromote)
-			err2 := ValidateAutoPromote(strategy, autoPromote)
+			err1 := cmd.ValidateAutoPromote(strategy, autoPromote)
+			err2 := cmd.ValidateAutoPromote(strategy, autoPromote)
 
 			// Results should be identical
 			if (err1 == nil) != (err2 == nil) {
@@ -544,10 +545,10 @@ func TestProperty4_AutoPromoteValidation(t *testing.T) {
 	t.Run("error_message_is_correct", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			// Generate a non-canary75 strategy
-			nonCanary75Strategies := []CanaryStrategy{Canary10, Canary25, Canary50}
+			nonCanary75Strategies := []cmd.CanaryStrategy{cmd.Canary10, cmd.Canary25, cmd.Canary50}
 			strategy := rapid.SampledFrom(nonCanary75Strategies).Draw(t, "strategy")
 
-			err := ValidateAutoPromote(strategy, true)
+			err := cmd.ValidateAutoPromote(strategy, true)
 			if err == nil {
 				t.Fatalf("Expected error for non-canary75 strategy with auto-promote")
 			}

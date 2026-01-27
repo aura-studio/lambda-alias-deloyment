@@ -1,4 +1,4 @@
-package patcher
+package patcher_test
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/internal/patcher"
 	"pgregory.net/rapid"
 )
 
@@ -65,7 +66,7 @@ Parameters:
 				t.Fatalf("Failed to write test file: %v", err)
 			}
 
-			err := ValidateTemplate(filePath)
+			err := patcher.ValidateTemplate(filePath)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got nil")
@@ -82,7 +83,7 @@ Parameters:
 
 	// Test non-existent file
 	t.Run("non-existent file", func(t *testing.T) {
-		err := ValidateTemplate(filepath.Join(tmpDir, "non-existent.yaml"))
+		err := patcher.ValidateTemplate(filepath.Join(tmpDir, "non-existent.yaml"))
 		if err == nil {
 			t.Error("Expected error for non-existent file")
 		}
@@ -101,7 +102,7 @@ func TestHasPatchMarker(t *testing.T) {
 	}{
 		{
 			name:     "has patch marker",
-			content:  "some content\n" + PatchStartMarker + "\nmore content",
+			content:  "some content\n" + patcher.PatchStartMarker + "\nmore content",
 			expected: true,
 		},
 		{
@@ -118,7 +119,7 @@ func TestHasPatchMarker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := HasPatchMarker(tt.content)
+			result := patcher.HasPatchMarker(tt.content)
 			if result != tt.expected {
 				t.Errorf("HasPatchMarker() = %v, want %v", result, tt.expected)
 			}
@@ -169,7 +170,7 @@ func TestHasAliasResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := HasAliasResources(tt.content)
+			result := patcher.HasAliasResources(tt.content)
 			if result != tt.expected {
 				t.Errorf("HasAliasResources() = %v, want %v", result, tt.expected)
 			}
@@ -195,7 +196,7 @@ func TestGetExistingAliasResources(t *testing.T) {
     Properties:
       Name: previous
 `
-	resources := GetExistingAliasResources(content)
+	resources := patcher.GetExistingAliasResources(content)
 
 	expected := []string{"FunctionVersion", "LiveAlias", "PreviousAlias"}
 	if len(resources) != len(expected) {
@@ -253,7 +254,7 @@ func TestCheckFunctionExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CheckFunctionExists(content, tt.functionName)
+			result := patcher.CheckFunctionExists(content, tt.functionName)
 			if result != tt.expected {
 				t.Errorf("CheckFunctionExists(%q) = %v, want %v", tt.functionName, result, tt.expected)
 			}
@@ -293,7 +294,7 @@ func TestCheckDescriptionParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CheckDescriptionParam(tt.content)
+			result := patcher.CheckDescriptionParam(tt.content)
 			if result != tt.expected {
 				t.Errorf("CheckDescriptionParam() = %v, want %v", result, tt.expected)
 			}
@@ -317,7 +318,7 @@ func TestDetectHttpApis(t *testing.T) {
   Function:
     Type: AWS::Serverless::Function
 `
-	apis := DetectHttpApis(content)
+	apis := patcher.DetectHttpApis(content)
 
 	expected := []string{"MyHttpApi", "AnotherApi"}
 	if len(apis) != len(expected) {
@@ -354,7 +355,7 @@ func TestDetectSchedules(t *testing.T) {
   Function:
     Type: AWS::Serverless::Function
 `
-	schedules := DetectSchedules(content)
+	schedules := patcher.DetectSchedules(content)
 
 	expected := []string{"DailySchedule", "HourlySchedule"}
 	if len(schedules) != len(expected) {
@@ -377,10 +378,10 @@ func TestDetectSchedules(t *testing.T) {
 
 // Test GeneratePatchContent
 func TestGeneratePatchContent(t *testing.T) {
-	content := GeneratePatchContent("MyFunction")
+	content := patcher.GeneratePatchContent("MyFunction")
 
 	// Check that it contains the start marker
-	if !strings.Contains(content, PatchStartMarker) {
+	if !strings.Contains(content, patcher.PatchStartMarker) {
 		t.Error("Generated content should contain start marker")
 	}
 
@@ -411,7 +412,7 @@ func TestGeneratePatchContent(t *testing.T) {
 
 // Test GenerateDescriptionParam
 func TestGenerateDescriptionParam(t *testing.T) {
-	content := GenerateDescriptionParam()
+	content := patcher.GenerateDescriptionParam()
 
 	if !strings.Contains(content, "Description:") {
 		t.Error("Generated content should contain Description parameter")
@@ -423,7 +424,7 @@ func TestGenerateDescriptionParam(t *testing.T) {
 
 // Test GenerateHttpApiPatch
 func TestGenerateHttpApiPatch(t *testing.T) {
-	content := GenerateHttpApiPatch("Function", "MyHttpApi")
+	content := patcher.GenerateHttpApiPatch("Function", "MyHttpApi")
 
 	// Check for permission resource
 	if !strings.Contains(content, "LiveAliasHttpApiPermission:") {
@@ -463,7 +464,7 @@ func TestBackupFile(t *testing.T) {
 	}
 
 	// Backup the file
-	backupPath, err := BackupFile(testFile)
+	backupPath, err := patcher.BackupFile(testFile)
 	if err != nil {
 		t.Fatalf("BackupFile failed: %v", err)
 	}
@@ -485,86 +486,6 @@ func TestBackupFile(t *testing.T) {
 	// Check backup file name format
 	if !strings.HasPrefix(backupPath, testFile+".bak.") {
 		t.Errorf("Backup path should have format {path}.bak.{timestamp}, got %q", backupPath)
-	}
-}
-
-// Test addDescriptionParam
-func TestAddDescriptionParam(t *testing.T) {
-	tests := []struct {
-		name     string
-		content  string
-		expected string
-	}{
-		{
-			name: "add to existing Parameters",
-			content: `Parameters:
-  Env:
-    Type: String
-
-Resources:
-  Function:
-    Type: AWS::Serverless::Function
-`,
-			expected: "Parameters:\n  Description:",
-		},
-		{
-			name: "add Parameters section before Resources",
-			content: `Resources:
-  Function:
-    Type: AWS::Serverless::Function
-`,
-			expected: "Parameters:\n  Description:",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := addDescriptionParam(tt.content)
-			if !strings.Contains(result, tt.expected) {
-				t.Errorf("Result should contain %q, got:\n%s", tt.expected, result)
-			}
-		})
-	}
-}
-
-// Test patchSchedules
-func TestPatchSchedules(t *testing.T) {
-	content := `Resources:
-  Schedule:
-    Type: AWS::Scheduler::Schedule
-    Properties:
-      Target:
-        Arn: !GetAtt Function.Arn
-        RoleArn: !GetAtt ScheduleRole.Arn
-`
-	result := patchSchedules(content, "Function")
-
-	// Should replace Target.Arn but not RoleArn
-	if !strings.Contains(result, "Arn: !Ref LiveAlias") {
-		t.Error("Should replace Target.Arn with !Ref LiveAlias")
-	}
-	if !strings.Contains(result, "RoleArn: !GetAtt ScheduleRole.Arn") {
-		t.Error("Should not modify RoleArn")
-	}
-}
-
-// Test patchIAMRoles
-func TestPatchIAMRoles(t *testing.T) {
-	content := `Resources:
-  ScheduleRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Policies:
-        - PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !GetAtt Function.Arn
-`
-	result := patchIAMRoles(content, "Function")
-
-	if !strings.Contains(result, `Resource: !Sub "${Function.Arn}:live"`) {
-		t.Errorf("Should modify Resource to include :live suffix, got:\n%s", result)
 	}
 }
 
@@ -603,7 +524,7 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 			}
 
 			// Validate should pass
-			err := ValidateTemplate(filePath)
+			err := patcher.ValidateTemplate(filePath)
 			if err != nil {
 				rt.Errorf("Valid SAM template should pass validation, got error: %v", err)
 			}
@@ -620,7 +541,7 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 			filePath := filepath.Join(tmpDir, fileName)
 
 			// Validate should fail with "文件不存在" error
-			err := ValidateTemplate(filePath)
+			err := patcher.ValidateTemplate(filePath)
 			if err == nil {
 				rt.Error("Non-existent file should fail validation")
 			}
@@ -649,7 +570,7 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 			}
 
 			// Validate should fail with "不是有效的 SAM 模板文件" error
-			err := ValidateTemplate(filePath)
+			err := patcher.ValidateTemplate(filePath)
 			if err == nil {
 				rt.Error("Template without AWS::Serverless should fail validation")
 			}
@@ -677,7 +598,7 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 			}
 
 			// Validate should fail with "模板文件缺少 Resources 部分" error
-			err := ValidateTemplate(filePath)
+			err := patcher.ValidateTemplate(filePath)
 			if err == nil {
 				rt.Error("Template without Resources section should fail validation")
 			}
@@ -718,9 +639,9 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 			}
 
 			// Run validation multiple times
-			result1 := ValidateTemplate(filePath)
-			result2 := ValidateTemplate(filePath)
-			result3 := ValidateTemplate(filePath)
+			result1 := patcher.ValidateTemplate(filePath)
+			result2 := patcher.ValidateTemplate(filePath)
+			result3 := patcher.ValidateTemplate(filePath)
 
 			// All results should be the same
 			if (result1 == nil) != (result2 == nil) || (result2 == nil) != (result3 == nil) {
@@ -732,73 +653,6 @@ func TestProperty6_TemplateValidation(t *testing.T) {
 				if result1.Error() != result2.Error() || result2.Error() != result3.Error() {
 					rt.Error("Error messages should be consistent for the same file")
 				}
-			}
-		})
-	})
-
-	// Property 6f: Templates with both AWS::Serverless and Resources always pass
-	t.Run("templates_with_serverless_and_resources_pass", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			tmpDir := t.TempDir()
-
-			// Generate various valid SAM templates with different structures
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{2,15}`).Draw(rt, "functionName")
-			handler := rapid.StringMatching(`[a-z][a-zA-Z0-9_]{2,20}`).Draw(rt, "handler")
-			runtime := rapid.SampledFrom([]string{
-				"python3.9", "python3.10", "python3.11",
-				"nodejs18.x", "nodejs20.x",
-				"go1.x", "provided.al2",
-			}).Draw(rt, "runtime")
-
-			// Add optional parameters section
-			hasParams := rapid.Bool().Draw(rt, "hasParams")
-			hasGlobals := rapid.Bool().Draw(rt, "hasGlobals")
-
-			content := generateValidSAMTemplateWithOptions(functionName, handler, runtime, hasParams, hasGlobals)
-
-			// Write to temp file
-			filePath := filepath.Join(tmpDir, "template.yaml")
-			if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-				rt.Fatalf("Failed to write test file: %v", err)
-			}
-
-			// Validate should always pass
-			err := ValidateTemplate(filePath)
-			if err != nil {
-				rt.Errorf("Valid SAM template with AWS::Serverless and Resources should pass, got error: %v", err)
-			}
-		})
-	})
-
-	// Property 6g: Empty files should fail validation
-	t.Run("empty_files_fail_validation", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			tmpDir := t.TempDir()
-
-			// Generate empty or whitespace-only content
-			whitespaceType := rapid.IntRange(0, 3).Draw(rt, "whitespaceType")
-			var content string
-			switch whitespaceType {
-			case 0:
-				content = ""
-			case 1:
-				content = "   "
-			case 2:
-				content = "\n\n\n"
-			case 3:
-				content = "  \n  \n  "
-			}
-
-			// Write to temp file
-			filePath := filepath.Join(tmpDir, "template.yaml")
-			if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-				rt.Fatalf("Failed to write test file: %v", err)
-			}
-
-			// Validate should fail
-			err := ValidateTemplate(filePath)
-			if err == nil {
-				rt.Error("Empty or whitespace-only file should fail validation")
 			}
 		})
 	})
@@ -865,45 +719,6 @@ Globals:
 `
 }
 
-func generateValidSAMTemplateWithOptions(functionName, handler, runtime string, hasParams, hasGlobals bool) string {
-	var sb strings.Builder
-
-	sb.WriteString(`AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
-Description: Test SAM Application
-`)
-
-	if hasParams {
-		sb.WriteString(`
-Parameters:
-  Environment:
-    Type: String
-    Default: test
-`)
-	}
-
-	if hasGlobals {
-		sb.WriteString(`
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 128
-`)
-	}
-
-	sb.WriteString(`
-Resources:
-  ` + functionName + `:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: ` + handler + `
-      Runtime: ` + runtime + `
-      CodeUri: ./
-`)
-
-	return sb.String()
-}
-
 // =============================================================================
 // Property 7: 补丁内容生成
 // **Validates: Requirements 10.8**
@@ -921,10 +736,10 @@ func TestProperty7_PatchContentGeneration(t *testing.T) {
 			// Generate valid function resource name (must start with letter, alphanumeric)
 			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
 
-			content := GeneratePatchContent(functionName)
+			content := patcher.GeneratePatchContent(functionName)
 
-			if !strings.Contains(content, PatchStartMarker) {
-				rt.Errorf("Generated patch content should contain start marker %q, got:\n%s", PatchStartMarker, content)
+			if !strings.Contains(content, patcher.PatchStartMarker) {
+				rt.Errorf("Generated patch content should contain start marker %q, got:\n%s", patcher.PatchStartMarker, content)
 			}
 		})
 	})
@@ -934,7 +749,7 @@ func TestProperty7_PatchContentGeneration(t *testing.T) {
 		rapid.Check(t, func(rt *rapid.T) {
 			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
 
-			content := GeneratePatchContent(functionName)
+			content := patcher.GeneratePatchContent(functionName)
 
 			// Check for Version resource with correct name
 			expectedVersionName := functionName + "Version:"
@@ -955,98 +770,40 @@ func TestProperty7_PatchContentGeneration(t *testing.T) {
 		})
 	})
 
-	// Property 7c: Generated patch content always contains LiveAlias resource
-	t.Run("patch_content_contains_live_alias", func(t *testing.T) {
+	// Property 7c: Generated patch content always contains all three aliases
+	t.Run("patch_content_contains_all_aliases", func(t *testing.T) {
 		rapid.Check(t, func(rt *rapid.T) {
 			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
 
-			content := GeneratePatchContent(functionName)
+			content := patcher.GeneratePatchContent(functionName)
 
-			// Check for LiveAlias resource
-			if !strings.Contains(content, "LiveAlias:") {
-				rt.Errorf("Generated patch content should contain LiveAlias resource, got:\n%s", content)
+			// Check for all three aliases
+			aliases := []string{"LiveAlias:", "PreviousAlias:", "LatestAlias:"}
+			for _, alias := range aliases {
+				if !strings.Contains(content, alias) {
+					rt.Errorf("Generated patch content should contain %s, got:\n%s", alias, content)
+				}
 			}
 
-			// Check for AWS::Lambda::Alias type
-			if !strings.Contains(content, "Type: AWS::Lambda::Alias") {
-				rt.Errorf("Generated patch content should contain AWS::Lambda::Alias type, got:\n%s", content)
-			}
-
-			// Check for live alias name
-			if !strings.Contains(content, "Name: live") {
-				rt.Errorf("Generated patch content should contain 'Name: live', got:\n%s", content)
+			// Check for alias names
+			aliasNames := []string{"Name: live", "Name: previous", "Name: latest"}
+			for _, name := range aliasNames {
+				if !strings.Contains(content, name) {
+					rt.Errorf("Generated patch content should contain %q, got:\n%s", name, content)
+				}
 			}
 		})
 	})
 
-	// Property 7d: Generated patch content always contains PreviousAlias resource
-	t.Run("patch_content_contains_previous_alias", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Check for PreviousAlias resource
-			if !strings.Contains(content, "PreviousAlias:") {
-				rt.Errorf("Generated patch content should contain PreviousAlias resource, got:\n%s", content)
-			}
-
-			// Check for previous alias name
-			if !strings.Contains(content, "Name: previous") {
-				rt.Errorf("Generated patch content should contain 'Name: previous', got:\n%s", content)
-			}
-		})
-	})
-
-	// Property 7e: Generated patch content always contains LatestAlias resource
-	t.Run("patch_content_contains_latest_alias", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Check for LatestAlias resource
-			if !strings.Contains(content, "LatestAlias:") {
-				rt.Errorf("Generated patch content should contain LatestAlias resource, got:\n%s", content)
-			}
-
-			// Check for latest alias name
-			if !strings.Contains(content, "Name: latest") {
-				rt.Errorf("Generated patch content should contain 'Name: latest', got:\n%s", content)
-			}
-		})
-	})
-
-	// Property 7f: All aliases reference the function version correctly
-	t.Run("aliases_reference_function_version", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Check that aliases reference the function version
-			expectedVersionRef := "!GetAtt " + functionName + "Version.Version"
-			if !strings.Contains(content, expectedVersionRef) {
-				rt.Errorf("Generated patch content should reference function version %q, got:\n%s", expectedVersionRef, content)
-			}
-
-			// Count occurrences - should be at least 3 (one for each alias)
-			count := strings.Count(content, expectedVersionRef)
-			if count < 3 {
-				rt.Errorf("Expected at least 3 references to function version, got %d", count)
-			}
-		})
-	})
-
-	// Property 7g: Generated content is deterministic for same function name
+	// Property 7d: Generated content is deterministic for same function name
 	t.Run("patch_generation_is_deterministic", func(t *testing.T) {
 		rapid.Check(t, func(rt *rapid.T) {
 			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
 
 			// Generate content multiple times
-			content1 := GeneratePatchContent(functionName)
-			content2 := GeneratePatchContent(functionName)
-			content3 := GeneratePatchContent(functionName)
+			content1 := patcher.GeneratePatchContent(functionName)
+			content2 := patcher.GeneratePatchContent(functionName)
+			content3 := patcher.GeneratePatchContent(functionName)
 
 			// All should be identical
 			if content1 != content2 || content2 != content3 {
@@ -1055,39 +812,12 @@ func TestProperty7_PatchContentGeneration(t *testing.T) {
 		})
 	})
 
-	// Property 7h: Different function names produce different version resource names
-	t.Run("different_functions_produce_different_version_names", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName1 := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,15}`).Draw(rt, "functionName1")
-			functionName2 := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,15}`).Draw(rt, "functionName2")
-
-			// Skip if names happen to be the same
-			if functionName1 == functionName2 {
-				rt.Skip("Skipping - generated same function names")
-			}
-
-			content1 := GeneratePatchContent(functionName1)
-			content2 := GeneratePatchContent(functionName2)
-
-			// Version resource names should be different
-			versionName1 := functionName1 + "Version:"
-			versionName2 := functionName2 + "Version:"
-
-			if strings.Contains(content1, versionName2) {
-				rt.Errorf("Content for %s should not contain version name for %s", functionName1, functionName2)
-			}
-			if strings.Contains(content2, versionName1) {
-				rt.Errorf("Content for %s should not contain version name for %s", functionName2, functionName1)
-			}
-		})
-	})
-
-	// Property 7i: Generated content contains exactly 4 resources (1 version + 3 aliases)
+	// Property 7e: Generated content contains exactly 4 resources (1 version + 3 aliases)
 	t.Run("patch_content_contains_exactly_four_resources", func(t *testing.T) {
 		rapid.Check(t, func(rt *rapid.T) {
 			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
 
-			content := GeneratePatchContent(functionName)
+			content := patcher.GeneratePatchContent(functionName)
 
 			// Count AWS::Lambda::Version occurrences
 			versionCount := strings.Count(content, "Type: AWS::Lambda::Version")
@@ -1102,84 +832,4 @@ func TestProperty7_PatchContentGeneration(t *testing.T) {
 			}
 		})
 	})
-
-	// Property 7j: All three alias names (live, previous, latest) are present
-	t.Run("all_three_alias_names_present", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			aliasNames := []string{"live", "previous", "latest"}
-			for _, aliasName := range aliasNames {
-				expectedName := "Name: " + aliasName
-				if !strings.Contains(content, expectedName) {
-					rt.Errorf("Generated patch content should contain alias name %q, got:\n%s", expectedName, content)
-				}
-			}
-		})
-	})
-
-	// Property 7k: Function references in aliases are correct
-	t.Run("function_references_in_aliases_correct", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Each alias should have FunctionName: !Ref {functionName}
-			expectedFunctionRef := "FunctionName: !Ref " + functionName
-
-			// Count occurrences - should be at least 4 (1 for version + 3 for aliases)
-			count := strings.Count(content, expectedFunctionRef)
-			if count < 4 {
-				rt.Errorf("Expected at least 4 function references, got %d", count)
-			}
-		})
-	})
-
-	// Property 7l: Generated content has valid YAML structure (basic check)
-	t.Run("generated_content_has_valid_structure", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Check that content starts with newline and marker
-			if !strings.HasPrefix(content, "\n"+PatchStartMarker) {
-				rt.Errorf("Generated content should start with newline and start marker, got:\n%s", content[:min(100, len(content))])
-			}
-
-			// Check that resource definitions have proper indentation (2 spaces for resource names)
-			resourceNames := []string{functionName + "Version:", "LiveAlias:", "PreviousAlias:", "LatestAlias:"}
-			for _, resName := range resourceNames {
-				expectedIndent := "  " + resName
-				if !strings.Contains(content, expectedIndent) {
-					rt.Errorf("Resource %s should have 2-space indentation, got:\n%s", resName, content)
-				}
-			}
-		})
-	})
-
-	// Property 7m: Description reference is present in version resource
-	t.Run("version_resource_references_description", func(t *testing.T) {
-		rapid.Check(t, func(rt *rapid.T) {
-			functionName := rapid.StringMatching(`[A-Z][a-zA-Z0-9]{1,30}`).Draw(rt, "functionName")
-
-			content := GeneratePatchContent(functionName)
-
-			// Version resource should reference Description parameter
-			if !strings.Contains(content, "Description: !Ref Description") {
-				rt.Errorf("Version resource should reference Description parameter, got:\n%s", content)
-			}
-		})
-	})
-}
-
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

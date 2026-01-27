@@ -1,4 +1,4 @@
-package cmd
+package cmd_test
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/cmd"
 	"pgregory.net/rapid"
 )
 
@@ -54,7 +55,7 @@ func TestValidateEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateEnv(tt.env)
+			err := cmd.ValidateEnv(tt.env)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateEnv(%q) error = %v, wantErr %v", tt.env, err, tt.wantErr)
 			}
@@ -70,19 +71,12 @@ func TestGetFunctionName(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Save original values
-	originalFunction := function
-	originalSamconfigPath := samconfigPath
-	defer func() {
-		function = originalFunction
-		samconfigPath = originalSamconfigPath
-	}()
-
 	t.Run("function flag takes priority", func(t *testing.T) {
-		function = "my-custom-function"
-		samconfigPath = filepath.Join(tmpDir, "nonexistent.toml")
+		cmd.SetFunction("my-custom-function")
+		cmd.SetSamconfigPath(filepath.Join(tmpDir, "nonexistent.toml"))
+		defer cmd.SetFunction("")
 
-		result, err := GetFunctionName("test")
+		result, err := cmd.GetFunctionName("test")
 		if err != nil {
 			t.Errorf("GetFunctionName() unexpected error: %v", err)
 		}
@@ -92,8 +86,9 @@ func TestGetFunctionName(t *testing.T) {
 	})
 
 	t.Run("reads from samconfig when function flag not set", func(t *testing.T) {
-		function = ""
-		samconfigPath = filepath.Join(tmpDir, "samconfig.toml")
+		cmd.SetFunction("")
+		samconfigPath := filepath.Join(tmpDir, "samconfig.toml")
+		cmd.SetSamconfigPath(samconfigPath)
 
 		// Create a valid samconfig.toml
 		samconfigContent := `
@@ -107,7 +102,7 @@ profile = "my-profile"
 			t.Fatalf("Failed to write samconfig.toml: %v", err)
 		}
 
-		result, err := GetFunctionName("test")
+		result, err := cmd.GetFunctionName("test")
 		if err != nil {
 			t.Errorf("GetFunctionName() unexpected error: %v", err)
 		}
@@ -118,18 +113,19 @@ profile = "my-profile"
 	})
 
 	t.Run("error when samconfig not found and no function flag", func(t *testing.T) {
-		function = ""
-		samconfigPath = filepath.Join(tmpDir, "nonexistent.toml")
+		cmd.SetFunction("")
+		cmd.SetSamconfigPath(filepath.Join(tmpDir, "nonexistent.toml"))
 
-		_, err := GetFunctionName("test")
+		_, err := cmd.GetFunctionName("test")
 		if err == nil {
 			t.Error("GetFunctionName() expected error, got nil")
 		}
 	})
 
 	t.Run("error when samconfig has no stack_name", func(t *testing.T) {
-		function = ""
-		samconfigPath = filepath.Join(tmpDir, "samconfig_empty.toml")
+		cmd.SetFunction("")
+		samconfigPath := filepath.Join(tmpDir, "samconfig_empty.toml")
+		cmd.SetSamconfigPath(samconfigPath)
 
 		// Create a samconfig.toml without stack_name
 		samconfigContent := `
@@ -142,7 +138,7 @@ profile = "my-profile"
 			t.Fatalf("Failed to write samconfig.toml: %v", err)
 		}
 
-		_, err := GetFunctionName("test")
+		_, err := cmd.GetFunctionName("test")
 		if err == nil {
 			t.Error("GetFunctionName() expected error, got nil")
 		}
@@ -157,27 +153,21 @@ func TestGetProfile(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Save original values
-	originalProfile := profile
-	originalSamconfigPath := samconfigPath
-	defer func() {
-		profile = originalProfile
-		samconfigPath = originalSamconfigPath
-	}()
-
 	t.Run("profile flag takes priority", func(t *testing.T) {
-		profile = "my-custom-profile"
-		samconfigPath = filepath.Join(tmpDir, "nonexistent.toml")
+		cmd.SetProfile("my-custom-profile")
+		cmd.SetSamconfigPath(filepath.Join(tmpDir, "nonexistent.toml"))
+		defer cmd.SetProfile("")
 
-		result := GetProfile("test")
+		result := cmd.GetProfile("test")
 		if result != "my-custom-profile" {
 			t.Errorf("GetProfile() = %q, want %q", result, "my-custom-profile")
 		}
 	})
 
 	t.Run("reads from samconfig when profile flag not set", func(t *testing.T) {
-		profile = ""
-		samconfigPath = filepath.Join(tmpDir, "samconfig.toml")
+		cmd.SetProfile("")
+		samconfigPath := filepath.Join(tmpDir, "samconfig.toml")
+		cmd.SetSamconfigPath(samconfigPath)
 
 		// Create a valid samconfig.toml
 		samconfigContent := `
@@ -191,25 +181,26 @@ profile = "samconfig-profile"
 			t.Fatalf("Failed to write samconfig.toml: %v", err)
 		}
 
-		result := GetProfile("test")
+		result := cmd.GetProfile("test")
 		if result != "samconfig-profile" {
 			t.Errorf("GetProfile() = %q, want %q", result, "samconfig-profile")
 		}
 	})
 
 	t.Run("returns empty string when samconfig not found", func(t *testing.T) {
-		profile = ""
-		samconfigPath = filepath.Join(tmpDir, "nonexistent.toml")
+		cmd.SetProfile("")
+		cmd.SetSamconfigPath(filepath.Join(tmpDir, "nonexistent.toml"))
 
-		result := GetProfile("test")
+		result := cmd.GetProfile("test")
 		if result != "" {
 			t.Errorf("GetProfile() = %q, want empty string", result)
 		}
 	})
 
 	t.Run("returns empty string when samconfig has no profile", func(t *testing.T) {
-		profile = ""
-		samconfigPath = filepath.Join(tmpDir, "samconfig_no_profile.toml")
+		cmd.SetProfile("")
+		samconfigPath := filepath.Join(tmpDir, "samconfig_no_profile.toml")
+		cmd.SetSamconfigPath(samconfigPath)
 
 		// Create a samconfig.toml without profile
 		samconfigContent := `
@@ -222,15 +213,16 @@ stack_name = "my-stack"
 			t.Fatalf("Failed to write samconfig.toml: %v", err)
 		}
 
-		result := GetProfile("test")
+		result := cmd.GetProfile("test")
 		if result != "" {
 			t.Errorf("GetProfile() = %q, want empty string", result)
 		}
 	})
 
 	t.Run("reads profile for prod environment", func(t *testing.T) {
-		profile = ""
-		samconfigPath = filepath.Join(tmpDir, "samconfig_prod.toml")
+		cmd.SetProfile("")
+		samconfigPath := filepath.Join(tmpDir, "samconfig_prod.toml")
+		cmd.SetSamconfigPath(samconfigPath)
 
 		// Create a samconfig.toml with prod environment
 		samconfigContent := `
@@ -248,47 +240,9 @@ profile = "prod-profile"
 			t.Fatalf("Failed to write samconfig.toml: %v", err)
 		}
 
-		result := GetProfile("prod")
+		result := cmd.GetProfile("prod")
 		if result != "prod-profile" {
 			t.Errorf("GetProfile(prod) = %q, want %q", result, "prod-profile")
-		}
-	})
-}
-
-func TestRootCommand(t *testing.T) {
-	t.Run("root command has correct use", func(t *testing.T) {
-		if rootCmd.Use != "lad" {
-			t.Errorf("rootCmd.Use = %q, want %q", rootCmd.Use, "lad")
-		}
-	})
-
-	t.Run("root command has env flag with default", func(t *testing.T) {
-		flag := rootCmd.PersistentFlags().Lookup("env")
-		if flag == nil {
-			t.Fatal("env flag not found")
-		}
-		if flag.DefValue != "test" {
-			t.Errorf("env flag default = %q, want %q", flag.DefValue, "test")
-		}
-	})
-
-	t.Run("root command has profile flag", func(t *testing.T) {
-		flag := rootCmd.PersistentFlags().Lookup("profile")
-		if flag == nil {
-			t.Fatal("profile flag not found")
-		}
-		if flag.DefValue != "" {
-			t.Errorf("profile flag default = %q, want empty string", flag.DefValue)
-		}
-	})
-
-	t.Run("root command has function flag", func(t *testing.T) {
-		flag := rootCmd.PersistentFlags().Lookup("function")
-		if flag == nil {
-			t.Fatal("function flag not found")
-		}
-		if flag.DefValue != "" {
-			t.Errorf("function flag default = %q, want empty string", flag.DefValue)
 		}
 	})
 }
@@ -311,7 +265,7 @@ func TestValidateEnvProperty(t *testing.T) {
 			validEnvs := []string{"test", "prod"}
 			env := rapid.SampledFrom(validEnvs).Draw(t, "env")
 
-			err := ValidateEnv(env)
+			err := cmd.ValidateEnv(env)
 			if err != nil {
 				t.Fatalf("ValidateEnv(%q) should accept valid environment, got error: %v", env, err)
 			}
@@ -329,7 +283,7 @@ func TestValidateEnvProperty(t *testing.T) {
 				return
 			}
 
-			err := ValidateEnv(env)
+			err := cmd.ValidateEnv(env)
 			if err == nil {
 				t.Fatalf("ValidateEnv(%q) should reject invalid environment, but got no error", env)
 			}
@@ -345,7 +299,7 @@ func TestValidateEnvProperty(t *testing.T) {
 	// Property 1c: Empty string should be rejected
 	t.Run("empty_string_rejected", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
-			err := ValidateEnv("")
+			err := cmd.ValidateEnv("")
 			if err == nil {
 				t.Fatal("ValidateEnv(\"\") should reject empty string, but got no error")
 			}
@@ -377,7 +331,7 @@ func TestValidateEnvProperty(t *testing.T) {
 				return
 			}
 
-			err := ValidateEnv(variant)
+			err := cmd.ValidateEnv(variant)
 			if err == nil {
 				t.Fatalf("ValidateEnv(%q) should reject case variant of %q, but got no error", variant, base)
 			}
@@ -403,7 +357,7 @@ func TestValidateEnvProperty(t *testing.T) {
 			}
 			envWithWs := rapid.SampledFrom(variations).Draw(t, "env_with_whitespace")
 
-			err := ValidateEnv(envWithWs)
+			err := cmd.ValidateEnv(envWithWs)
 			if err == nil {
 				t.Fatalf("ValidateEnv(%q) should reject string with whitespace, but got no error", envWithWs)
 			}

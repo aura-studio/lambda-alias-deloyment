@@ -108,3 +108,18 @@ func handleError(err error, code int) {
 func HandleParamError(err error) {
 	handleError(err, exitcode.ParamError)
 }
+
+// SetFunction 设置函数名（用于测试）
+func SetFunction(f string) {
+	function = f
+}
+
+// SetProfile 设置 AWS Profile（用于测试）
+func SetProfile(p string) {
+	profile = p
+}
+
+// SetSamconfigPath 设置 samconfig.toml 路径（用于测试）
+func SetSamconfigPath(path string) {
+	samconfigPath = path
+}

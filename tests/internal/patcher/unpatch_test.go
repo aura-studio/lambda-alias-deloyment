@@ -1,9 +1,10 @@
-package patcher
+package patcher_test
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/aura-studio/lambda-alias-deployment/internal/patcher"
 	"pgregory.net/rapid"
 )
 
@@ -20,10 +21,10 @@ func TestRemovePatchMarkerContent(t *testing.T) {
   Function:
     Type: AWS::Serverless::Function
 
-` + PatchStartMarker + `
+` + patcher.PatchStartMarker + `
   FunctionVersion:
     Type: AWS::Lambda::Version
-` + PatchEndMarker + `
+` + patcher.PatchEndMarker + `
 `,
 			expected: `Resources:
   Function:
@@ -39,17 +40,17 @@ func TestRemovePatchMarkerContent(t *testing.T) {
 		{
 			name: "only start marker returns unchanged",
 			content: `content
-` + PatchStartMarker + `
+` + patcher.PatchStartMarker + `
 more content`,
 			expected: `content
-` + PatchStartMarker + `
+` + patcher.PatchStartMarker + `
 more content`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := RemovePatchMarkerContent(tt.content)
+			result := patcher.RemovePatchMarkerContent(tt.content)
 			if result != tt.expected {
 				t.Errorf("RemovePatchMarkerContent() = %q, want %q", result, tt.expected)
 			}
@@ -76,7 +77,7 @@ func TestRemoveAliasResources(t *testing.T) {
       Name: live
 `
 	resources := []string{"FunctionVersion", "LiveAlias"}
-	result := RemoveAliasResources(content, resources)
+	result := patcher.RemoveAliasResources(content, resources)
 
 	if strings.Contains(result, "FunctionVersion:") {
 		t.Error("Should remove FunctionVersion resource")
@@ -106,9 +107,9 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 			beforeContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,100}`).Draw(rt, "beforeContent")
 			patchContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "patchContent")
 
-			fullContent := beforeContent + "\n" + PatchStartMarker + "\n" + patchContent + "\n" + PatchEndMarker + "\n"
+			fullContent := beforeContent + "\n" + patcher.PatchStartMarker + "\n" + patchContent + "\n" + patcher.PatchEndMarker + "\n"
 
-			result := RemovePatchMarkerContent(fullContent)
+			result := patcher.RemovePatchMarkerContent(fullContent)
 
 			if !strings.HasPrefix(result, beforeContent) {
 				rt.Errorf("Content before marker should be preserved, got: %q", result)
@@ -123,9 +124,9 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 			patchContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "patchContent")
 			afterContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,100}`).Draw(rt, "afterContent")
 
-			fullContent := beforeContent + "\n" + PatchStartMarker + "\n" + patchContent + "\n" + PatchEndMarker + "\n" + afterContent
+			fullContent := beforeContent + "\n" + patcher.PatchStartMarker + "\n" + patchContent + "\n" + patcher.PatchEndMarker + "\n" + afterContent
 
-			result := RemovePatchMarkerContent(fullContent)
+			result := patcher.RemovePatchMarkerContent(fullContent)
 
 			if !strings.HasSuffix(result, afterContent) {
 				rt.Errorf("Content after marker should be preserved, got: %q", result)
@@ -139,14 +140,14 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 			beforeContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "beforeContent")
 			patchContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "patchContent")
 
-			fullContent := beforeContent + "\n" + PatchStartMarker + "\n" + patchContent + "\n" + PatchEndMarker + "\n"
+			fullContent := beforeContent + "\n" + patcher.PatchStartMarker + "\n" + patchContent + "\n" + patcher.PatchEndMarker + "\n"
 
-			result := RemovePatchMarkerContent(fullContent)
+			result := patcher.RemovePatchMarkerContent(fullContent)
 
-			if strings.Contains(result, PatchStartMarker) {
+			if strings.Contains(result, patcher.PatchStartMarker) {
 				rt.Error("Start marker should be removed")
 			}
-			if strings.Contains(result, PatchEndMarker) {
+			if strings.Contains(result, patcher.PatchEndMarker) {
 				rt.Error("End marker should be removed")
 			}
 		})
@@ -160,9 +161,9 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 			uniqueId := rapid.StringMatching(`UNIQUE_[A-Z0-9]{10}`).Draw(rt, "uniqueId")
 			patchContent := "patch_" + uniqueId
 
-			fullContent := beforeContent + "\n" + PatchStartMarker + "\n" + patchContent + "\n" + PatchEndMarker + "\n"
+			fullContent := beforeContent + "\n" + patcher.PatchStartMarker + "\n" + patchContent + "\n" + patcher.PatchEndMarker + "\n"
 
-			result := RemovePatchMarkerContent(fullContent)
+			result := patcher.RemovePatchMarkerContent(fullContent)
 
 			if strings.Contains(result, patchContent) {
 				rt.Errorf("Patch content should be removed, but found %q in result", patchContent)
@@ -180,7 +181,7 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 				rt.Skip("Skipping - content accidentally contains marker-like text")
 			}
 
-			result := RemovePatchMarkerContent(content)
+			result := patcher.RemovePatchMarkerContent(content)
 
 			if result != content {
 				rt.Errorf("Content without markers should be unchanged, got: %q", result)
@@ -194,10 +195,10 @@ func TestProperty8_RemovePatchMarkerContent(t *testing.T) {
 			beforeContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "beforeContent")
 			patchContent := rapid.StringMatching(`[a-zA-Z0-9\s:_-]{10,50}`).Draw(rt, "patchContent")
 
-			fullContent := beforeContent + "\n" + PatchStartMarker + "\n" + patchContent + "\n" + PatchEndMarker + "\n"
+			fullContent := beforeContent + "\n" + patcher.PatchStartMarker + "\n" + patchContent + "\n" + patcher.PatchEndMarker + "\n"
 
-			result1 := RemovePatchMarkerContent(fullContent)
-			result2 := RemovePatchMarkerContent(result1)
+			result1 := patcher.RemovePatchMarkerContent(fullContent)
+			result2 := patcher.RemovePatchMarkerContent(result1)
 
 			if result1 != result2 {
 				rt.Error("RemovePatchMarkerContent should be idempotent")

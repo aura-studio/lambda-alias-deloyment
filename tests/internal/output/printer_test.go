@@ -1,10 +1,12 @@
-package output
+package output_test
 
 import (
 	"bytes"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/aura-studio/lambda-alias-deployment/internal/output"
 )
 
 // captureOutput captures stdout and stderr during function execution
@@ -40,7 +42,7 @@ func captureOutput(fn func()) (stdout, stderr string) {
 
 func TestInfo(t *testing.T) {
 	stdout, stderr := captureOutput(func() {
-		Info("test message")
+		output.Info("test message")
 	})
 
 	if !strings.Contains(stdout, "test message") {
@@ -53,7 +55,7 @@ func TestInfo(t *testing.T) {
 
 func TestInfoWithFormat(t *testing.T) {
 	stdout, _ := captureOutput(func() {
-		Info("value: %d", 42)
+		output.Info("value: %d", 42)
 	})
 
 	if !strings.Contains(stdout, "value: 42") {
@@ -63,7 +65,7 @@ func TestInfoWithFormat(t *testing.T) {
 
 func TestError(t *testing.T) {
 	stdout, stderr := captureOutput(func() {
-		Error("test error")
+		output.Error("test error")
 	})
 
 	if stdout != "" {
@@ -76,7 +78,7 @@ func TestError(t *testing.T) {
 
 func TestErrorWithFormat(t *testing.T) {
 	_, stderr := captureOutput(func() {
-		Error("code: %d", 500)
+		output.Error("code: %d", 500)
 	})
 
 	if !strings.Contains(stderr, "错误: code: 500") {
@@ -86,7 +88,7 @@ func TestErrorWithFormat(t *testing.T) {
 
 func TestSuccess(t *testing.T) {
 	stdout, stderr := captureOutput(func() {
-		Success("operation completed")
+		output.Success("operation completed")
 	})
 
 	if !strings.Contains(stdout, "✓ operation completed") {
@@ -99,7 +101,7 @@ func TestSuccess(t *testing.T) {
 
 func TestSuccessWithFormat(t *testing.T) {
 	stdout, _ := captureOutput(func() {
-		Success("created %d items", 5)
+		output.Success("created %d items", 5)
 	})
 
 	if !strings.Contains(stdout, "✓ created 5 items") {
@@ -109,7 +111,7 @@ func TestSuccessWithFormat(t *testing.T) {
 
 func TestWarning(t *testing.T) {
 	stdout, stderr := captureOutput(func() {
-		Warning("be careful")
+		output.Warning("be careful")
 	})
 
 	if !strings.Contains(stdout, "⚠ be careful") {
@@ -122,7 +124,7 @@ func TestWarning(t *testing.T) {
 
 func TestWarningWithFormat(t *testing.T) {
 	stdout, _ := captureOutput(func() {
-		Warning("limit: %d%%", 80)
+		output.Warning("limit: %d%%", 80)
 	})
 
 	if !strings.Contains(stdout, "⚠ limit: 80%") {
@@ -132,7 +134,7 @@ func TestWarningWithFormat(t *testing.T) {
 
 func TestSeparator(t *testing.T) {
 	stdout, stderr := captureOutput(func() {
-		Separator()
+		output.Separator()
 	})
 
 	expected := "=========================================="

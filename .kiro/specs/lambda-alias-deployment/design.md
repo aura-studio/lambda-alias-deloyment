@@ -30,18 +30,31 @@ lambda-alias-deployment/
 │   ├── status.go            # status 命令
 │   ├── patch.go             # patch 命令
 │   └── unpatch.go           # unpatch 命令
-└── internal/
-    ├── aws/                 # AWS 客户端封装
-    │   └── lambda.go        # Lambda API 封装
-    ├── config/              # 配置检测
-    │   └── samconfig.go     # samconfig.toml 解析
-    ├── patcher/             # 模板补丁工具
-    │   ├── patch.go         # patch 逻辑
-    │   └── unpatch.go       # unpatch 逻辑
-    ├── output/              # 输出格式化
-    │   └── printer.go       # 信息输出工具
-    └── exitcode/            # 退出码定义
-        └── codes.go         # 退出码常量
+├── internal/
+│   ├── aws/                 # AWS 客户端封装
+│   │   └── lambda.go        # Lambda API 封装
+│   ├── config/              # 配置检测
+│   │   └── samconfig.go     # samconfig.toml 解析
+│   ├── patcher/             # 模板补丁工具
+│   │   ├── patch.go         # patch 逻辑
+│   │   └── unpatch.go       # unpatch 逻辑
+│   ├── output/              # 输出格式化
+│   │   └── printer.go       # 信息输出工具
+│   └── exitcode/            # 退出码定义
+│       └── codes.go         # 退出码常量
+└── tests/                    # 测试文件目录
+    ├── cmd/                 # 命令测试
+    │   ├── root_test.go     # 根命令测试
+    │   ├── rollback_test.go # rollback 命令测试
+    │   └── strategy_test.go # 灰度策略测试
+    └── internal/            # 内部模块测试
+        ├── aws/
+        │   └── lambda_test.go      # Lambda 客户端测试
+        ├── config/
+        │   └── samconfig_test.go   # SAMConfig 解析测试
+        └── patcher/
+            ├── patch_test.go       # patch 逻辑测试
+            └── unpatch_test.go     # unpatch 逻辑测试
 ```
 
 ### 架构图
@@ -595,4 +608,15 @@ flowchart TD
 
 - 单元测试和属性测试：Go 标准 testing 包 + [rapid](https://github.com/flyingmutant/rapid) 属性测试库
 - Mock：[gomock](https://github.com/golang/mock) 或接口注入
+
+### 测试文件组织
+
+所有测试文件统一放置在 `tests/` 目录下，按照源代码的目录结构组织：
+
+- `tests/cmd/` - 命令相关测试
+- `tests/internal/aws/` - AWS 客户端测试
+- `tests/internal/config/` - 配置模块测试
+- `tests/internal/patcher/` - 补丁模块测试
+
+运行测试命令：`go test ./tests/...`
 
