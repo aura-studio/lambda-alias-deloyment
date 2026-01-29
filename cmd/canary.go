@@ -15,8 +15,7 @@ import (
 
 var (
 	// canary 命令选项
-	strategy    string
-	autoPromote bool
+	strategy string
 )
 
 var canaryCmd = &cobra.Command{
@@ -34,13 +33,14 @@ var canaryCmd = &cobra.Command{
   canary10 - 10% 流量到新版本
   canary25 - 25% 流量到新版本
   canary50 - 50% 流量到新版本
-  canary75 - 75% 流量到新版本`,
+  canary75 - 75% 流量到新版本
+
+如需自动递进灰度，请使用 'lad auto' 命令`,
 	Run: runCanary,
 }
 
 func init() {
 	canaryCmd.Flags().StringVar(&strategy, "strategy", "", "灰度策略 (canary10|canary25|canary50|canary75)")
-	canaryCmd.Flags().BoolVar(&autoPromote, "auto-promote", false, "自动执行 promote（仅限 canary75 策略）")
 	canaryCmd.MarkFlagRequired("strategy")
 	rootCmd.AddCommand(canaryCmd)
 }
@@ -54,7 +54,7 @@ func runCanary(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 2. 验证 --strategy 参数 (需求 5.1, 5.2, 5.3)
+	// 2. 验证 --strategy 参数
 	canaryStrategy := CanaryStrategy(strategy)
 	if !canaryStrategy.IsValid() {
 		validStrategies := make([]string, len(AllStrategies))
@@ -65,20 +65,14 @@ func runCanary(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 3. 验证 --auto-promote 参数 (需求 5.7, 5.8)
-	if err := ValidateAutoPromote(canaryStrategy, autoPromote); err != nil {
-		HandleParamError(err)
-		return
-	}
-
-	// 4. 获取函数名
+	// 3. 获取函数名
 	functionName, err := GetFunctionName(env)
 	if err != nil {
 		HandleParamError(err)
 		return
 	}
 
-	// 5. 获取 AWS Profile
+	// 4. 获取 AWS Profile
 	awsProfile := GetProfile(env)
 
 	output.Info("开始灰度发布...")
@@ -90,7 +84,7 @@ func runCanary(cmd *cobra.Command, args []string) {
 	}
 	output.Separator()
 
-	// 6. 创建 AWS Lambda 客户端
+	// 5. 创建 AWS Lambda 客户端
 	lambdaClient, err := aws.NewClient(ctx, awsProfile)
 	if err != nil {
 		output.Error("创建 AWS 客户端失败: %v", err)
@@ -98,7 +92,7 @@ func runCanary(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 7. 获取 live 和 latest 别名的版本 (需求 5.4)
+	// 6. 获取 live 和 latest 别名的版本
 	output.Info("获取别名版本...")
 	liveVersion, exitCode := lambdaClient.GetAliasVersion(ctx, functionName, "live")
 	if exitCode != exitcode.Success {
@@ -114,14 +108,14 @@ func runCanary(cmd *cobra.Command, args []string) {
 	}
 	output.Info("latest 别名: 版本 %s", latestVersion)
 
-	// 8. 检查 live 和 latest 是否指向同一版本 (需求 5.5)
+	// 7. 检查 live 和 latest 是否指向同一版本
 	if liveVersion == latestVersion {
 		output.Error("live 和 latest 指向同一版本 (%s)，请先执行 deploy 部署新版本", liveVersion)
 		os.Exit(exitcode.ParamError)
 		return
 	}
 
-	// 9. 配置灰度流量 (需求 5.6)
+	// 8. 配置灰度流量
 	output.Separator()
 	output.Info("配置灰度流量...")
 	exitCode = lambdaClient.ConfigureCanary(ctx, functionName, "live", liveVersion, latestVersion, canaryStrategy.Weight())
@@ -131,7 +125,7 @@ func runCanary(cmd *cobra.Command, args []string) {
 	}
 	output.Success("灰度配置完成")
 
-	// 10. 显示流量分配和下一步提示 (需求 5.9)
+	// 9. 显示流量分配和下一步提示
 	output.Separator()
 	output.Success("灰度发布配置成功!")
 	output.Info("")
@@ -139,14 +133,6 @@ func runCanary(cmd *cobra.Command, args []string) {
 	output.Info("  - 稳定版本 (v%s): %.0f%%", liveVersion, (1-canaryStrategy.Weight())*100)
 	output.Info("  - 灰度版本 (v%s): %.0f%%", latestVersion, canaryStrategy.Weight()*100)
 	output.Info("")
-
-	// 11. 处理 --auto-promote 参数 (需求 5.7)
-	if autoPromote && canaryStrategy == Canary75 {
-		output.Info("检测到 --auto-promote 参数，自动执行 promote...")
-		output.Separator()
-		executePromote(ctx, lambdaClient, functionName, liveVersion, latestVersion)
-		return
-	}
 
 	// 显示下一步操作提示
 	output.Info("下一步操作:")
@@ -156,34 +142,4 @@ func runCanary(cmd *cobra.Command, args []string) {
 	}
 	output.Info("  完成灰度发布: lad promote --env %s", env)
 	output.Info("  回退灰度发布: lad rollback --env %s", env)
-}
-
-// executePromote 执行 promote 操作（用于 auto-promote）
-func executePromote(ctx context.Context, lambdaClient *aws.Client, functionName, liveVersion, latestVersion string) {
-	output.Info("执行 promote...")
-
-	// 更新 previous 别名指向原 live 版本
-	output.Info("更新 previous 别名...")
-	exitCode := lambdaClient.UpdateAlias(ctx, functionName, "previous", liveVersion)
-	if exitCode != exitcode.Success {
-		os.Exit(exitCode)
-		return
-	}
-	output.Success("previous 别名已更新到版本 %s", liveVersion)
-
-	// 更新 live 别名指向 latest 版本并清除灰度配置
-	output.Info("更新 live 别名...")
-	exitCode = lambdaClient.UpdateAlias(ctx, functionName, "live", latestVersion)
-	if exitCode != exitcode.Success {
-		os.Exit(exitCode)
-		return
-	}
-	output.Success("live 别名已更新到版本 %s", latestVersion)
-
-	output.Separator()
-	output.Success("Promote 完成!")
-	output.Info("")
-	output.Info("版本变更:")
-	output.Info("  - previous: -> 版本 %s", liveVersion)
-	output.Info("  - live: 版本 %s -> 版本 %s", liveVersion, latestVersion)
 }

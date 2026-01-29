@@ -1,8 +1,6 @@
 // Package cmd implements the command line interface for the lad tool.
 package cmd
 
-import "fmt"
-
 // CanaryStrategy 灰度策略
 type CanaryStrategy string
 
@@ -61,17 +59,4 @@ func (s CanaryStrategy) NextStrategy() CanaryStrategy {
 	default:
 		return Canary10 // 无效策略返回第一个策略
 	}
-}
-
-// ErrAutoPromoteOnlyCanary75 is the error returned when --auto-promote is used with a non-canary75 strategy
-var ErrAutoPromoteOnlyCanary75 = fmt.Errorf("--auto-promote 仅在策略为 canary75 时可用")
-
-// ValidateAutoPromote validates the --auto-promote parameter
-// Returns an error if autoPromote is true but strategy is not Canary75
-// **Validates: Requirements 5.8**
-func ValidateAutoPromote(strategy CanaryStrategy, autoPromote bool) error {
-	if autoPromote && strategy != Canary75 {
-		return ErrAutoPromoteOnlyCanary75
-	}
-	return nil
 }

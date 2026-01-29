@@ -24,6 +24,7 @@ lambda-alias-deployment/
 │   ├── root.go              # 根命令和通用选项
 │   ├── deploy.go            # deploy 命令
 │   ├── canary.go            # canary 命令
+│   ├── auto.go              # auto 命令（自动递进灰度）
 │   ├── promote.go           # promote 命令
 │   ├── rollback.go          # rollback 命令
 │   ├── switch.go            # switch 命令
@@ -66,6 +67,7 @@ graph TB
         Root[root.go]
         Deploy[deploy.go]
         Canary[canary.go]
+        Auto[auto.go]
         Promote[promote.go]
         Rollback[rollback.go]
         Switch[switch.go]
@@ -91,6 +93,7 @@ graph TB
     Main --> Root
     Root --> Deploy
     Root --> Canary
+    Root --> Auto
     Root --> Promote
     Root --> Rollback
     Root --> Switch
@@ -102,6 +105,8 @@ graph TB
     Deploy --> Config
     Canary --> AWS
     Canary --> Config
+    Auto --> AWS
+    Auto --> Config
     Promote --> AWS
     Promote --> Config
     Rollback --> AWS
@@ -463,11 +468,11 @@ func (l *RollbackLog) AppendToFile(path string) error
 
 **Validates: Requirements 5.2, 5.3**
 
-### Property 4: auto-promote 参数验证
+### Property 4: 自动灰度递进
 
-*For any* canary 命令执行，如果指定了 --auto-promote 但策略不是 canary75，则应返回参数错误。
+*For any* auto 命令执行，应按 canary10 → canary25 → canary50 → canary75 → promote 的顺序递进，每个阶段等待指定时间后继续。
 
-**Validates: Requirements 5.8**
+**Validates: Requirements for auto command**
 
 ### Property 5: 回退日志格式
 

@@ -73,6 +73,14 @@
 sam build → sam deploy → lad deploy → lad promote
 ```
 
+## 自动灰度流程
+
+```
+sam build → sam deploy → lad deploy → lad auto --wait 5m
+```
+
+自动按 10% → 25% → 50% → 75% → 100% 递进，每阶段等待指定时间。
+
 ## 紧急回退流程
 
 ```
