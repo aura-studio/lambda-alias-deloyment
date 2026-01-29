@@ -130,10 +130,12 @@
 |------|------|--------|----------|----------|
 | sam deploy | → vN+1 | → vN+1 | → vN+1 | 100% vN+1 |
 | lad deploy | → vN | → vN+1 | → vN | 100% vN |
+| lad canary 0 | vN | vN+1 | vN | 100% vN (清除灰度) |
 | lad canary 10 | vN/vN+1 | vN+1 | vN | 90/10 |
 | lad canary 25 | vN/vN+1 | vN+1 | vN | 75/25 |
 | lad canary 50 | vN/vN+1 | vN+1 | vN | 50/50 |
 | lad canary 75 | vN/vN+1 | vN+1 | vN | 25/75 |
+| lad canary 100 | vN/vN+1 | vN+1 | vN | 0/100 |
 | lad auto | 递进 | vN+1 | → vN | 10→25→50→75→100 |
 | lad promote | → vN+1 | vN+1 | → vN | 100% vN+1 |
 | lad rollback | → vN | → vN | vN | 100% vN |

@@ -30,17 +30,19 @@ var canaryCmd = &cobra.Command{
 4. 显示流量分配比例和下一步操作提示
 
 支持的灰度策略：
-  canary10 - 10% 流量到新版本
-  canary25 - 25% 流量到新版本
-  canary50 - 50% 流量到新版本
-  canary75 - 75% 流量到新版本
+  canary0   - 0% 流量到新版本（清除灰度配置）
+  canary10  - 10% 流量到新版本
+  canary25  - 25% 流量到新版本
+  canary50  - 50% 流量到新版本
+  canary75  - 75% 流量到新版本
+  canary100 - 100% 流量到新版本（不更新 previous，建议用 promote）
 
 如需自动递进灰度，请使用 'lad auto' 命令`,
 	Run: runCanary,
 }
 
 func init() {
-	canaryCmd.Flags().StringVar(&strategy, "strategy", "", "灰度策略 (canary10|canary25|canary50|canary75)")
+	canaryCmd.Flags().StringVar(&strategy, "strategy", "", "灰度策略 (canary0|canary10|canary25|canary50|canary75|canary100)")
 	canaryCmd.MarkFlagRequired("strategy")
 	rootCmd.AddCommand(canaryCmd)
 }
@@ -109,37 +111,63 @@ func runCanary(cmd *cobra.Command, args []string) {
 	output.Info("latest 别名: 版本 %s", latestVersion)
 
 	// 7. 检查 live 和 latest 是否指向同一版本
-	if liveVersion == latestVersion {
+	// canary0 允许在同版本时执行（用于清除灰度配置）
+	if liveVersion == latestVersion && canaryStrategy != Canary0 {
 		output.Error("live 和 latest 指向同一版本 (%s)，请先执行 deploy 部署新版本", liveVersion)
 		os.Exit(exitcode.ParamError)
 		return
 	}
 
-	// 8. 配置灰度流量
+	// 8. canary100 警告
+	if canaryStrategy == Canary100 {
+		output.Warning("canary100 会将 100%% 流量切到新版本，但不会更新 previous 别名")
+		output.Warning("建议使用 'lad promote' 完成正式发布")
+	}
+
+	// 9. 配置灰度流量
 	output.Separator()
-	output.Info("配置灰度流量...")
-	exitCode = lambdaClient.ConfigureCanary(ctx, functionName, "live", liveVersion, latestVersion, canaryStrategy.Weight())
+	if canaryStrategy == Canary0 {
+		output.Info("清除灰度配置...")
+		// canary0 直接更新别名到 liveVersion，清除路由配置
+		exitCode = lambdaClient.UpdateAlias(ctx, functionName, "live", liveVersion)
+	} else {
+		output.Info("配置灰度流量...")
+		exitCode = lambdaClient.ConfigureCanary(ctx, functionName, "live", liveVersion, latestVersion, canaryStrategy.Weight())
+	}
 	if exitCode != exitcode.Success {
 		os.Exit(exitCode)
 		return
 	}
-	output.Success("灰度配置完成")
+	if canaryStrategy == Canary0 {
+		output.Success("灰度配置已清除")
+	} else {
+		output.Success("灰度配置完成")
+	}
 
-	// 9. 显示流量分配和下一步提示
+	// 10. 显示流量分配和下一步提示
 	output.Separator()
 	output.Success("灰度发布配置成功!")
 	output.Info("")
-	output.Info("流量分配:")
-	output.Info("  - 稳定版本 (v%s): %.0f%%", liveVersion, (1-canaryStrategy.Weight())*100)
-	output.Info("  - 灰度版本 (v%s): %.0f%%", latestVersion, canaryStrategy.Weight()*100)
-	output.Info("")
+	if canaryStrategy == Canary0 {
+		output.Info("流量分配:")
+		output.Info("  - 稳定版本 (v%s): 100%%", liveVersion)
+		output.Info("")
+		output.Info("下一步操作:")
+		output.Info("  重新开始灰度: lad canary --env %s --strategy canary10", env)
+		output.Info("  部署新版本: lad deploy --env %s", env)
+	} else {
+		output.Info("流量分配:")
+		output.Info("  - 稳定版本 (v%s): %.0f%%", liveVersion, (1-canaryStrategy.Weight())*100)
+		output.Info("  - 灰度版本 (v%s): %.0f%%", latestVersion, canaryStrategy.Weight()*100)
+		output.Info("")
 
-	// 显示下一步操作提示
-	output.Info("下一步操作:")
-	nextStrategy := canaryStrategy.NextStrategy()
-	if nextStrategy != canaryStrategy {
-		output.Info("  增加灰度比例: lad canary --env %s --strategy %s", env, nextStrategy)
+		// 显示下一步操作提示
+		output.Info("下一步操作:")
+		nextStrategy := canaryStrategy.NextStrategy()
+		if nextStrategy != canaryStrategy {
+			output.Info("  增加灰度比例: lad canary --env %s --strategy %s", env, nextStrategy)
+		}
+		output.Info("  完成灰度发布: lad promote --env %s", env)
+		output.Info("  回退灰度发布: lad rollback --env %s", env)
 	}
-	output.Info("  完成灰度发布: lad promote --env %s", env)
-	output.Info("  回退灰度发布: lad rollback --env %s", env)
 }

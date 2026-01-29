@@ -156,6 +156,15 @@ func runRollback(cmd *cobra.Command, args []string) {
 	}
 	output.Success("live 别名已更新到版本 %s", previousVersion)
 
+	// 8. 同时更新 latest 别名，防止下次 promote 又推上问题版本
+	output.Info("更新 latest 别名...")
+	exitCode = lambdaClient.UpdateAlias(ctx, functionName, "latest", previousVersion)
+	if exitCode != exitcode.Success {
+		os.Exit(exitCode)
+		return
+	}
+	output.Success("latest 别名已更新到版本 %s", previousVersion)
+
 	// 8. 记录回退日志 (需求 7.4, 7.5, 7.6, 7.7)
 	rollbackReason := reason
 	if rollbackReason == "" {
@@ -190,12 +199,13 @@ func runRollback(cmd *cobra.Command, args []string) {
 		output.Info("回退日志已记录到: %s", logPath)
 	}
 
-	// 9. 显示回退结果和下一步操作提示 (需求 7.8)
+	// 10. 显示回退结果和下一步操作提示 (需求 7.8)
 	output.Separator()
 	output.Success("Rollback 完成!")
 	output.Info("")
 	output.Info("版本变更:")
 	output.Info("  - live: 版本 %s -> 版本 %s", liveVersion, previousVersion)
+	output.Info("  - latest: -> 版本 %s", previousVersion)
 	output.Info("")
 	output.Info("回退信息:")
 	output.Info("  - 原因: %s", rollbackReason)
