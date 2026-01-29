@@ -569,13 +569,14 @@ func insertPatchBeforeOutputs(content, patchContent string) string {
 	if loc != nil {
 		// 在 Outputs: 之前插入补丁内容
 		insertPos := loc[0]
-		// 确保补丁内容前有换行
-		if insertPos > 0 && content[insertPos-1] != '\n' {
-			patchContent = "\n" + patchContent
+		// 清理插入位置前的多余空行，只保留一个换行
+		for insertPos > 1 && content[insertPos-1] == '\n' && content[insertPos-2] == '\n' {
+			insertPos--
 		}
-		return content[:insertPos] + patchContent + "\n" + content[insertPos:]
+		return content[:insertPos] + patchContent + "\n" + content[loc[0]:]
 	}
 
-	// 没有 Outputs 部分，在文件末尾添加
+	// 没有 Outputs 部分，清理文件末尾的多余空行
+	content = strings.TrimRight(content, "\n\r\t ")
 	return content + patchContent
 }
