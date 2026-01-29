@@ -238,8 +238,6 @@ func Patch(opts PatchOptions) *PatchResult {
 	output.Info("  - LatestAlias (测试版本别名)")
 	if len(httpApis) > 0 {
 		output.Info("  - LiveAliasHttpApiPermission (HttpApi 调用权限)")
-		output.Info("  - HttpApiLiveRoute (HttpApi 路由)")
-		output.Info("  - HttpApiLiveIntegration (HttpApi 集成)")
 	}
 	fmt.Println()
 	if hasTriggers {
@@ -456,6 +454,8 @@ func GenerateDescriptionParam() string {
 }
 
 // GenerateHttpApiPatch 生成 HttpApi 相关补丁
+// 注意：SAM HttpApi 会自动创建 $default 路由，不需要额外创建
+// 只需要添加 LiveAlias 的调用权限
 func GenerateHttpApiPatch(functionName, apiName string) string {
 	return fmt.Sprintf(`
   # LiveAlias 的 HttpApi 调用权限
@@ -465,25 +465,8 @@ func GenerateHttpApiPatch(functionName, apiName string) string {
       FunctionName: !Ref LiveAlias
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:%s/*"
-
-  # HttpApi 路由到 LiveAlias
-  HttpApiLiveRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref %s
-      RouteKey: "$default"
-      Target: !Sub "integrations/${HttpApiLiveIntegration}"
-
-  # HttpApi 集成到 LiveAlias
-  HttpApiLiveIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref %s
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Ref LiveAlias
-      PayloadFormatVersion: "2.0"
-`, apiName, apiName, apiName)
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${%s}/*"
+`, apiName)
 }
 
 // BackupFile 备份文件，返回备份文件路径
