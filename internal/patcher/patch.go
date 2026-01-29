@@ -18,6 +18,10 @@ const (
 	PatchStartMarker = "# >>>>>> DEPLOY_SCRIPT_PATCH_START <<<<<<"
 	// PatchEndMarker is the end marker for patch content
 	PatchEndMarker = "# >>>>>> DEPLOY_SCRIPT_PATCH_END <<<<<<"
+	// LineModifyMarker is the marker for modified lines (original line preserved as comment)
+	LineModifyMarker = "# <<< LAD_ORIGINAL:"
+	// LineModifyEndMarker is the end marker for modified lines
+	LineModifyEndMarker = ">>>"
 )
 
 // PatchOptions patch 命令选项
@@ -524,22 +528,55 @@ func addDescriptionParam(content string) string {
 }
 
 // patchSchedules 修改 Schedule 资源指向 LiveAlias
+// 保留原始行作为注释，便于 unpatch 时还原
 func patchSchedules(content, functionName string) string {
 	// 只替换 Target 下的 Arn（不是 RoleArn）
 	// 匹配: Arn: !GetAtt FunctionName.Arn
-	pattern := regexp.MustCompile(`(?m)^(\s+)Arn: !GetAtt [A-Za-z0-9]+\.Arn`)
-	return pattern.ReplaceAllString(content, "${1}Arn: !Ref LiveAlias")
+	pattern := regexp.MustCompile(`(?m)^(\s+)(Arn: !GetAtt [A-Za-z0-9]+\.Arn)`)
+	return pattern.ReplaceAllStringFunc(content, func(match string) string {
+		submatches := pattern.FindStringSubmatch(match)
+		if len(submatches) < 3 {
+			return match
+		}
+		indent := submatches[1]
+		originalValue := submatches[2]
+		// 格式: 注释保留原始行 + 新行
+		return fmt.Sprintf("%s%s %s %s\n%sArn: !Ref LiveAlias", indent, LineModifyMarker, originalValue, LineModifyEndMarker, indent)
+	})
 }
 
 // patchIAMRoles 修改 IAM Role 资源的 Lambda 权限
+// 保留原始行作为注释，便于 unpatch 时还原
 func patchIAMRoles(content, functionName string) string {
 	// 修改 Resource: !GetAtt Function.Arn 改为 !Sub "${Function.Arn}:live"
-	pattern1 := regexp.MustCompile(`Resource: !GetAtt ` + regexp.QuoteMeta(functionName) + `\.Arn`)
-	content = pattern1.ReplaceAllString(content, fmt.Sprintf(`Resource: !Sub "${%s.Arn}:live"`, functionName))
+	pattern1 := regexp.MustCompile(`(?m)^(\s+)(Resource: !GetAtt ` + regexp.QuoteMeta(functionName) + `\.Arn)`)
+	content = pattern1.ReplaceAllStringFunc(content, func(match string) string {
+		submatches := pattern1.FindStringSubmatch(match)
+		if len(submatches) < 3 {
+			return match
+		}
+		indent := submatches[1]
+		originalValue := submatches[2]
+		newValue := fmt.Sprintf(`Resource: !Sub "${%s.Arn}:live"`, functionName)
+		return fmt.Sprintf("%s%s %s %s\n%s%s", indent, LineModifyMarker, originalValue, LineModifyEndMarker, indent, newValue)
+	})
 
 	// 如果已经是 !Sub 格式但没有 :live，添加 :live
-	pattern2 := regexp.MustCompile(`Resource: !Sub "\${` + regexp.QuoteMeta(functionName) + `\.Arn}"`)
-	content = pattern2.ReplaceAllString(content, fmt.Sprintf(`Resource: !Sub "${%s.Arn}:live"`, functionName))
+	pattern2 := regexp.MustCompile(`(?m)^(\s+)(Resource: !Sub "\${` + regexp.QuoteMeta(functionName) + `\.Arn}")`)
+	content = pattern2.ReplaceAllStringFunc(content, func(match string) string {
+		submatches := pattern2.FindStringSubmatch(match)
+		if len(submatches) < 3 {
+			return match
+		}
+		indent := submatches[1]
+		originalValue := submatches[2]
+		// 检查是否已经有 :live
+		if strings.Contains(originalValue, ":live") {
+			return match
+		}
+		newValue := fmt.Sprintf(`Resource: !Sub "${%s.Arn}:live"`, functionName)
+		return fmt.Sprintf("%s%s %s %s\n%s%s", indent, LineModifyMarker, originalValue, LineModifyEndMarker, indent, newValue)
+	})
 
 	return content
 }

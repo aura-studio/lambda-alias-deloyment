@@ -56,15 +56,16 @@ func Unpatch(opts UnpatchOptions) *UnpatchResult {
 
 	hasPatchMarker := HasPatchMarker(contentStr)
 	hasAliasResources := HasAliasResources(contentStr)
+	hasLineModifications := HasLineModifications(contentStr)
 
 	// 2. 检查是否有内容需要移除
-	if !hasPatchMarker && !hasAliasResources {
+	if !hasPatchMarker && !hasAliasResources && !hasLineModifications {
 		output.Success("模板文件不包含任何补丁内容或版本/别名资源，无需移除")
 		return result
 	}
 
 	// 3. 如果没有补丁标记但有别名资源，需要 --force
-	if !hasPatchMarker && hasAliasResources {
+	if !hasPatchMarker && hasAliasResources && !hasLineModifications {
 		existingResources := GetExistingAliasResources(contentStr)
 		fmt.Println()
 		output.Warning("检测到模板中存在版本/别名资源，但没有补丁标记:")
@@ -88,18 +89,29 @@ func Unpatch(opts UnpatchOptions) *UnpatchResult {
 	output.Info("将移除以下内容:")
 	output.Separator()
 
-	var newContent string
+	var newContent string = contentStr
+
+	// 4.1 还原行级别的修改
+	if hasLineModifications {
+		modifiedLines := GetModifiedLines(contentStr)
+		output.Info("- 还原 %d 处行级别修改:", len(modifiedLines))
+		for _, line := range modifiedLines {
+			output.Info("    %s", line)
+		}
+		newContent = RestoreModifiedLines(newContent)
+	}
+
+	// 4.2 移除补丁标记内容
 	if hasPatchMarker {
-		// 移除标记之间的内容
 		output.Info("- 补丁标记之间的所有内容")
-		newContent = RemovePatchMarkerContent(contentStr)
-	} else if opts.Force {
+		newContent = RemovePatchMarkerContent(newContent)
+	} else if opts.Force && hasAliasResources {
 		// 强制移除别名资源
 		existingResources := GetExistingAliasResources(contentStr)
 		for _, res := range existingResources {
 			output.Info("- 资源: %s", res)
 		}
-		newContent = RemoveAliasResources(contentStr, existingResources)
+		newContent = RemoveAliasResources(newContent, existingResources)
 	}
 
 	// 5. 如果是 dry-run，到此结束
@@ -182,4 +194,35 @@ func RemoveAliasResources(content string, resources []string) string {
 		content = pattern.ReplaceAllString(content, "")
 	}
 	return content
+}
+
+// HasLineModifications 检查是否存在行级别的修改标记
+func HasLineModifications(content string) bool {
+	return strings.Contains(content, LineModifyMarker)
+}
+
+// GetModifiedLines 获取所有被修改的原始行
+func GetModifiedLines(content string) []string {
+	var lines []string
+	// 匹配格式: # <<< LAD_ORIGINAL: xxx >>>
+	pattern := regexp.MustCompile(regexp.QuoteMeta(LineModifyMarker) + ` (.+?) ` + regexp.QuoteMeta(LineModifyEndMarker))
+	matches := pattern.FindAllStringSubmatch(content, -1)
+	for _, match := range matches {
+		if len(match) > 1 {
+			lines = append(lines, match[1])
+		}
+	}
+	return lines
+}
+
+// RestoreModifiedLines 还原所有被修改的行
+// 删除注释行和新行，恢复原始行
+func RestoreModifiedLines(content string) string {
+	// 匹配格式:
+	// {indent}# <<< LAD_ORIGINAL: {original_content} >>>
+	// {indent}{new_content}
+	// 替换为:
+	// {indent}{original_content}
+	pattern := regexp.MustCompile(`(?m)^(\s*)` + regexp.QuoteMeta(LineModifyMarker) + ` (.+?) ` + regexp.QuoteMeta(LineModifyEndMarker) + `\n\s*.+`)
+	return pattern.ReplaceAllString(content, "${1}${2}")
 }
