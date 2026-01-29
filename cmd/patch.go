@@ -13,6 +13,7 @@ var (
 	patchTemplate     string
 	patchFunctionName string
 	patchDryRun       bool
+	patchNoBackup     bool
 )
 
 var patchCmd = &cobra.Command{
@@ -35,6 +36,7 @@ func init() {
 	patchCmd.Flags().StringVar(&patchTemplate, "template", "template.yaml", "模板文件路径")
 	patchCmd.Flags().StringVar(&patchFunctionName, "function", "Function", "函数资源名称")
 	patchCmd.Flags().BoolVar(&patchDryRun, "dry-run", false, "仅预览，不实际修改")
+	patchCmd.Flags().BoolVar(&patchNoBackup, "no-backup", false, "不创建备份文件")
 	rootCmd.AddCommand(patchCmd)
 }
 
@@ -43,6 +45,7 @@ func runPatch(cmd *cobra.Command, args []string) {
 		TemplatePath: patchTemplate,
 		FunctionName: patchFunctionName,
 		DryRun:       patchDryRun,
+		NoBackup:     patchNoBackup,
 	}
 
 	result := patcher.Patch(opts)

@@ -16,6 +16,7 @@ type UnpatchOptions struct {
 	TemplatePath string // 模板文件路径，默认 template.yaml
 	DryRun       bool   // 仅预览，不实际修改
 	Force        bool   // 强制移除（即使无标记）
+	NoBackup     bool   // 不创建备份文件
 }
 
 // UnpatchResult contains the result of an unpatch operation
@@ -123,15 +124,17 @@ func Unpatch(opts UnpatchOptions) *UnpatchResult {
 		return result
 	}
 
-	// 6. 备份原文件
-	backupPath, err := BackupFile(opts.TemplatePath)
-	if err != nil {
-		output.Error("备份文件失败: %s", err.Error())
-		result.ExitCode = exitcode.ParamError
-		return result
+	// 6. 备份原文件（如果未禁用）
+	if !opts.NoBackup {
+		backupPath, err := BackupFile(opts.TemplatePath)
+		if err != nil {
+			output.Error("备份文件失败: %s", err.Error())
+			result.ExitCode = exitcode.ParamError
+			return result
+		}
+		result.BackupPath = backupPath
+		output.Success("已备份原文件到: %s", backupPath)
 	}
-	result.BackupPath = backupPath
-	output.Success("已备份原文件到: %s", backupPath)
 
 	// 7. 写入新内容
 	if err := os.WriteFile(opts.TemplatePath, []byte(newContent), 0644); err != nil {
@@ -147,7 +150,9 @@ func Unpatch(opts UnpatchOptions) *UnpatchResult {
 	output.Info("Unpatch 完成!")
 	output.Separator()
 	output.Info("模板文件: %s", opts.TemplatePath)
-	output.Info("备份文件: %s", backupPath)
+	if result.BackupPath != "" {
+		output.Info("备份文件: %s", result.BackupPath)
+	}
 	fmt.Println()
 	output.Info("下一步:")
 	output.Info("  重新打补丁: lad patch --template %s", opts.TemplatePath)

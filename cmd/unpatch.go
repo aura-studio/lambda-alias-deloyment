@@ -13,6 +13,7 @@ var (
 	unpatchTemplate string
 	unpatchDryRun   bool
 	unpatchForce    bool
+	unpatchNoBackup bool
 )
 
 var unpatchCmd = &cobra.Command{
@@ -33,6 +34,7 @@ func init() {
 	unpatchCmd.Flags().StringVar(&unpatchTemplate, "template", "template.yaml", "模板文件路径")
 	unpatchCmd.Flags().BoolVar(&unpatchDryRun, "dry-run", false, "仅预览，不实际修改")
 	unpatchCmd.Flags().BoolVar(&unpatchForce, "force", false, "强制移除（即使无标记）")
+	unpatchCmd.Flags().BoolVar(&unpatchNoBackup, "no-backup", false, "不创建备份文件")
 	rootCmd.AddCommand(unpatchCmd)
 }
 
@@ -41,6 +43,7 @@ func runUnpatch(cmd *cobra.Command, args []string) {
 		TemplatePath: unpatchTemplate,
 		DryRun:       unpatchDryRun,
 		Force:        unpatchForce,
+		NoBackup:     unpatchNoBackup,
 	}
 
 	result := patcher.Unpatch(opts)

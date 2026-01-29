@@ -29,6 +29,7 @@ type PatchOptions struct {
 	TemplatePath string // 模板文件路径，默认 template.yaml
 	FunctionName string // 函数资源名称，默认 Function
 	DryRun       bool   // 仅预览，不实际修改
+	NoBackup     bool   // 不创建备份文件
 }
 
 // PatchResult contains the result of a patch operation
@@ -175,15 +176,17 @@ func Patch(opts PatchOptions) *PatchResult {
 		return result
 	}
 
-	// 10. 备份原文件
-	backupPath, err := BackupFile(opts.TemplatePath)
-	if err != nil {
-		output.Error("备份文件失败: %s", err.Error())
-		result.ExitCode = exitcode.ParamError
-		return result
+	// 10. 备份原文件（如果未禁用）
+	if !opts.NoBackup {
+		backupPath, err := BackupFile(opts.TemplatePath)
+		if err != nil {
+			output.Error("备份文件失败: %s", err.Error())
+			result.ExitCode = exitcode.ParamError
+			return result
+		}
+		result.BackupPath = backupPath
+		output.Success("已备份原文件到: %s", backupPath)
 	}
-	result.BackupPath = backupPath
-	output.Success("已备份原文件到: %s", backupPath)
 
 	// 11. 添加 Description 参数（如果需要）
 	if needDescriptionParam {
@@ -224,7 +227,9 @@ func Patch(opts PatchOptions) *PatchResult {
 	output.Info("补丁应用完成!")
 	output.Separator()
 	output.Info("模板文件: %s", opts.TemplatePath)
-	output.Info("备份文件: %s", backupPath)
+	if result.BackupPath != "" {
+		output.Info("备份文件: %s", result.BackupPath)
+	}
 	fmt.Println()
 	output.Info("已添加资源:")
 	output.Info("  - %sVersion (Lambda 版本)", opts.FunctionName)
