@@ -202,12 +202,13 @@ func Patch(opts PatchOptions) *PatchResult {
 		output.Success("已修改 IAM Role 权限指向 :live 别名")
 	}
 
-	// 13. 在文件末尾添加补丁内容（包括 HttpApi 资源和结束标记）
-	contentStr += patchContent
+	// 13. 在 Resources 部分末尾添加补丁内容（Outputs 之前）
+	fullPatchContent := patchContent
 	if httpApiContent != "" {
-		contentStr += httpApiContent
+		fullPatchContent += httpApiContent
 	}
-	contentStr += "\n" + PatchEndMarker + "\n"
+	fullPatchContent += "\n" + PatchEndMarker + "\n"
+	contentStr = insertPatchBeforeOutputs(contentStr, fullPatchContent)
 
 	// 写入文件
 	if err := os.WriteFile(opts.TemplatePath, []byte(contentStr), 0644); err != nil {
@@ -579,4 +580,25 @@ func patchIAMRoles(content, functionName string) string {
 	})
 
 	return content
+}
+
+// insertPatchBeforeOutputs 在 Outputs 部分之前插入补丁内容
+// 如果没有 Outputs 部分，则在文件末尾添加
+func insertPatchBeforeOutputs(content, patchContent string) string {
+	// 查找 Outputs: 的位置（顶级，即行首）
+	outputsPattern := regexp.MustCompile(`(?m)^Outputs:`)
+	loc := outputsPattern.FindStringIndex(content)
+
+	if loc != nil {
+		// 在 Outputs: 之前插入补丁内容
+		insertPos := loc[0]
+		// 确保补丁内容前有换行
+		if insertPos > 0 && content[insertPos-1] != '\n' {
+			patchContent = "\n" + patchContent
+		}
+		return content[:insertPos] + patchContent + "\n" + content[insertPos:]
+	}
+
+	// 没有 Outputs 部分，在文件末尾添加
+	return content + patchContent
 }
