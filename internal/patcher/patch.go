@@ -236,9 +236,6 @@ func Patch(opts PatchOptions) *PatchResult {
 	output.Info("  - LiveAlias (生产流量别名)")
 	output.Info("  - PreviousAlias (回退版本别名)")
 	output.Info("  - LatestAlias (测试版本别名)")
-	if len(httpApis) > 0 {
-		output.Info("  - LiveAliasHttpApiPermission (HttpApi 调用权限)")
-	}
 	fmt.Println()
 	if hasTriggers {
 		output.Info("已修改触发器:")
@@ -454,19 +451,11 @@ func GenerateDescriptionParam() string {
 }
 
 // GenerateHttpApiPatch 生成 HttpApi 相关补丁
-// 注意：SAM HttpApi 会自动创建 $default 路由，不需要额外创建
-// 只需要添加 LiveAlias 的调用权限
+// SAM HttpApi 会自动创建路由和集成，指向 Function
+// 灰度发布通过 lad deploy 在部署后修改集成目标
 func GenerateHttpApiPatch(functionName, apiName string) string {
-	return fmt.Sprintf(`
-  # LiveAlias 的 HttpApi 调用权限
-  LiveAliasHttpApiPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LiveAlias
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${%s}/*"
-`, apiName)
+	// HttpApi 不需要额外的补丁资源
+	return ""
 }
 
 // BackupFile 备份文件，返回备份文件路径
