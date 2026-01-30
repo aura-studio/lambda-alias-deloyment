@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/aws"
-	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
+	"github.com/aura-studio/lad/internal/aws"
+	"github.com/aura-studio/lad/internal/exitcode"
 	"pgregory.net/rapid"
 )
 

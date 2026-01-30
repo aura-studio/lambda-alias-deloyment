@@ -1,4 +1,4 @@
-module github.com/aura-studio/lambda-alias-deployment
+module github.com/aura-studio/lad
 
 go 1.23
 

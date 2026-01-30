@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/aws"
-	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
-	"github.com/aura-studio/lambda-alias-deployment/internal/output"
+	"github.com/aura-studio/lad/internal/aws"
+	"github.com/aura-studio/lad/internal/exitcode"
+	"github.com/aura-studio/lad/internal/output"
 	"github.com/spf13/cobra"
 )
 

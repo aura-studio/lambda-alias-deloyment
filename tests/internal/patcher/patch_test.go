@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/patcher"
+	"github.com/aura-studio/lad/internal/patcher"
 	"pgregory.net/rapid"
 )
 

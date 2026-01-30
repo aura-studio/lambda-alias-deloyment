@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/config"
+	"github.com/aura-studio/lad/internal/config"
 	"pgregory.net/rapid"
 )
 

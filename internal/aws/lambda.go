@@ -5,8 +5,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
-	"github.com/aura-studio/lambda-alias-deployment/internal/output"
+	"github.com/aura-studio/lad/internal/exitcode"
+	"github.com/aura-studio/lad/internal/output"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"

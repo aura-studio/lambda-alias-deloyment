@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/config"
-	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
-	"github.com/aura-studio/lambda-alias-deployment/internal/output"
+	"github.com/aura-studio/lad/internal/config"
+	"github.com/aura-studio/lad/internal/exitcode"
+	"github.com/aura-studio/lad/internal/output"
 	"github.com/spf13/cobra"
 )
 

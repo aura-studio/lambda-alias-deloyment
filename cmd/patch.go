@@ -4,7 +4,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/patcher"
+	"github.com/aura-studio/lad/internal/patcher"
 	"github.com/spf13/cobra"
 )
 

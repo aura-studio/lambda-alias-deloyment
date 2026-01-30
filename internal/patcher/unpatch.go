@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/exitcode"
-	"github.com/aura-studio/lambda-alias-deployment/internal/output"
+	"github.com/aura-studio/lad/internal/exitcode"
+	"github.com/aura-studio/lad/internal/output"
 )
 
 // UnpatchOptions unpatch 命令选项

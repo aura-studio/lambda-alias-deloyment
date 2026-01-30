@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aura-studio/lambda-alias-deployment/cmd"
+	"github.com/aura-studio/lad/cmd"
 	"pgregory.net/rapid"
 )
 

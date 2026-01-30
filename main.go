@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/aura-studio/lambda-alias-deployment/cmd"
+	"github.com/aura-studio/lad/cmd"
 )
 
 func main() {

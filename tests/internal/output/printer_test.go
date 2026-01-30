@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aura-studio/lambda-alias-deployment/internal/output"
+	"github.com/aura-studio/lad/internal/output"
 )
 
 // captureOutput captures stdout and stderr during function execution
