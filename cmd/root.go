@@ -4,12 +4,25 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/aura-studio/lad/internal/config"
 	"github.com/aura-studio/lad/internal/exitcode"
 	"github.com/aura-studio/lad/internal/output"
 	"github.com/spf13/cobra"
 )
+
+// Version 版本信息，通过 go install 自动注入
+var Version = "dev"
+
+func init() {
+	// 从构建信息中获取版本
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if info.Main.Version != "" && info.Main.Version != "(devel)" {
+			Version = info.Main.Version
+		}
+	}
+}
 
 var (
 	// 全局选项
@@ -22,8 +35,9 @@ var (
 var samconfigPath = "samconfig.toml"
 
 var rootCmd = &cobra.Command{
-	Use:   "lad",
-	Short: "Lambda Alias Deployment - Lambda 函数灰度发布工具",
+	Use:     "lad",
+	Short:   "Lambda Alias Deployment - Lambda 函数灰度发布工具",
+	Version: Version,
 	Long: `Lambda Alias Deployment (lad) 是一个用于管理 AWS Lambda 函数版本和别名的命令行工具。
 支持灰度发布、回退和版本切换等功能。`,
 	Run: func(cmd *cobra.Command, args []string) {
