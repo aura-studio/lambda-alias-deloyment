@@ -26,13 +26,14 @@ Lambda Alias Deployment (LAD) 是一个用于管理 AWS Lambda 函数灰度发�
 |------|------|
 | `patch` | 给 template.yaml 添加 Version 和 Alias 资源 |
 | `unpatch` | 移除补丁内容，还原 template.yaml |
-| `deploy` | 部署新版本，更新 latest 别名 |
 | `canary` | 手动灰度发布，按指定百分比分配流量 |
 | `auto` | 自动递进灰度发布 |
 | `promote` | 完成灰度，100% 切换到新版本 |
 | `rollback` | 紧急回退到上一个稳定版本 |
 | `status` | 查看当前别名状态 |
 | `switch` | 极端情况下切换到指定版本 |
+
+注意：代码部署由 `sam deploy` 完成，lad 只负责别名和流量管理。
 
 ### canary 命令
 

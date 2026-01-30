@@ -106,8 +106,17 @@ func runSwitch(cmd *cobra.Command, args []string) {
 
 	// 9. 检查 live 是否已指向目标版本 (需求 8.5)
 	if liveVersion == switchVersion {
-		output.Success("live 已指向版本 %s，无需切换", switchVersion)
-		os.Exit(exitcode.Success)
+		output.Separator()
+		output.Error("切换失败: live 已指向版本 %s", switchVersion)
+		output.Info("")
+		output.Info("无法执行切换的原因:")
+		output.Info("  - live 别名已经指向目标版本 %s", switchVersion)
+		output.Info("  - 无需重复切换")
+		output.Info("")
+		output.Info("建议操作:")
+		output.Info("  - 使用 'lad status' 查看当前别名状态")
+		output.Info("  - 如需切换到其他版本，请指定不同的 --version 参数")
+		os.Exit(exitcode.ParamError)
 		return
 	}
 

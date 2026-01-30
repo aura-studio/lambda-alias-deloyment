@@ -114,8 +114,15 @@ func runAuto(cmd *cobra.Command, args []string) {
 
 	// 8. 检查 live 和 latest 是否指向同一版本
 	if liveVersion == latestVersion {
-		output.Error("live 和 latest 指向同一版本 (%s)，请先执行 deploy 部署新版本", liveVersion)
-		os.Exit(exitcode.ParamError)
+		output.Separator()
+		output.Warning("live 和 latest 指向同一版本 (%s)", liveVersion)
+		output.Warning("没有新版本需要灰度发布，跳过 auto 操作")
+		output.Info("")
+		output.Info("可能的原因:")
+		output.Info("  - sam deploy 没有检测到代码变化")
+		output.Info("  - 已经完成了 promote 操作")
+		output.Info("")
+		output.Info("如需发布新版本，请先更新代码后重新执行 sam deploy")
 		return
 	}
 

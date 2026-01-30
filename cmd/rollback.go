@@ -141,8 +141,21 @@ func runRollback(cmd *cobra.Command, args []string) {
 
 	// 6. 检查 live 和 previous 是否指向同一版本 (需求 7.2)
 	if liveVersion == previousVersion {
-		output.Success("live 和 previous 已指向同一版本 (%s)，无需回退", liveVersion)
-		os.Exit(exitcode.Success)
+		output.Separator()
+		output.Error("回退失败: live 和 previous 已指向同一版本 (%s)", liveVersion)
+		output.Info("")
+		output.Info("无法执行回退的原因:")
+		output.Info("  - live 和 previous 别名都指向版本 %s", liveVersion)
+		output.Info("  - 没有可回退的历史版本")
+		output.Info("")
+		output.Info("可能的情况:")
+		output.Info("  - 这是首次部署，还没有历史版本")
+		output.Info("  - 已经执行过回退操作")
+		output.Info("")
+		output.Info("建议操作:")
+		output.Info("  - 使用 'lad switch --version <版本号>' 切换到指定版本")
+		output.Info("  - 使用 'lad status' 查看当前别名状态")
+		os.Exit(exitcode.ParamError)
 		return
 	}
 
