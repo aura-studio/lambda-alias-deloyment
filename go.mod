@@ -5,14 +5,15 @@ go 1.23
 toolchain go1.24.1
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.87.1
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/spf13/cobra v1.10.2
+	pgregory.net/rapid v1.2.0
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
@@ -28,5 +29,4 @@ require (
 	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	pgregory.net/rapid v1.2.0 // indirect
 )
