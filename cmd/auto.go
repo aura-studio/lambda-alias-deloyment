@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -14,28 +15,33 @@ import (
 
 var (
 	// auto 命令选项
-	autoWait time.Duration
+	autoPercent int
+	autoWait    time.Duration
 )
 
 var autoCmd = &cobra.Command{
 	Use:   "auto",
 	Short: "自动递进灰度发布",
-	Long: `自动递进灰度发布，按 10% → 25% → 50% → 75% → 100% 的顺序逐步切换流量。
+	Long: `自动递进灰度发布，按指定步长逐步增加流量到新版本。
 
 该命令会执行以下操作：
 1. 获取 live 和 latest 别名的版本
-2. 按顺序执行灰度策略：canary10 → canary25 → canary50 → canary75
-3. 每个阶段等待指定时间（默认 1 分钟）
-4. 最后执行 promote 完成 100% 切换
+2. 按 --percent 指定的步长递增灰度比例
+3. 每个阶段等待 --wait 指定的时间
+4. 达到 100% 后执行 promote 完成切换
 
-使用 --wait 参数指定每个阶段的等待时间，例如：
-  lad auto --wait 5m   # 每阶段等待 5 分钟
-  lad auto --wait 30s  # 每阶段等待 30 秒`,
+示例：
+  lad auto --percent 10 --wait 5m   # 每次增加 10%，每阶段等待 5 分钟
+                                     # 10% → 20% → 30% → ... → 100%
+  
+  lad auto --percent 25 --wait 1h   # 每次增加 25%，每阶段等待 1 小时
+                                     # 25% → 50% → 75% → 100%`,
 	Run: runAuto,
 }
 
 func init() {
-	autoCmd.Flags().DurationVar(&autoWait, "wait", 1*time.Minute, "每个灰度阶段的等待时间")
+	autoCmd.Flags().IntVar(&autoPercent, "percent", 10, "每次增加的灰度百分比 (1-100)")
+	autoCmd.Flags().DurationVar(&autoWait, "wait", 5*time.Minute, "每个灰度阶段的等待时间")
 	rootCmd.AddCommand(autoCmd)
 }
 
@@ -48,26 +54,41 @@ func runAuto(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 2. 获取函数名
+	// 2. 验证 --percent 参数
+	if autoPercent < 1 || autoPercent > 100 {
+		HandleParamError(fmt.Errorf("无效的百分比 '%d'，有效范围为 1-100", autoPercent))
+		return
+	}
+
+	// 3. 获取函数名
 	functionName, err := GetFunctionName(env)
 	if err != nil {
 		HandleParamError(err)
 		return
 	}
 
-	// 3. 获取 AWS Profile
+	// 4. 获取 AWS Profile
 	awsProfile := GetProfile(env)
+
+	// 5. 计算灰度步骤
+	var steps []int
+	for pct := autoPercent; pct < 100; pct += autoPercent {
+		steps = append(steps, pct)
+	}
+	// 确保最后一步是 100%（由 promote 完成）
 
 	output.Info("开始自动灰度发布...")
 	output.Info("环境: %s", env)
 	output.Info("函数: %s", functionName)
+	output.Info("步长: %d%%", autoPercent)
 	output.Info("等待时间: %v", autoWait)
+	output.Info("灰度步骤: %v → promote", steps)
 	if awsProfile != "" {
 		output.Info("Profile: %s", awsProfile)
 	}
 	output.Separator()
 
-	// 4. 创建 AWS Lambda 客户端
+	// 6. 创建 AWS Lambda 客户端
 	lambdaClient, err := aws.NewClient(ctx, awsProfile)
 	if err != nil {
 		output.Error("创建 AWS 客户端失败: %v", err)
@@ -75,7 +96,7 @@ func runAuto(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 5. 获取 live 和 latest 别名的版本
+	// 7. 获取 live 和 latest 别名的版本
 	output.Info("获取别名版本...")
 	liveVersion, exitCode := lambdaClient.GetAliasVersion(ctx, functionName, "live")
 	if exitCode != exitcode.Success {
@@ -91,39 +112,36 @@ func runAuto(cmd *cobra.Command, args []string) {
 	}
 	output.Info("latest 别名: 版本 %s", latestVersion)
 
-	// 6. 检查 live 和 latest 是否指向同一版本
+	// 8. 检查 live 和 latest 是否指向同一版本
 	if liveVersion == latestVersion {
 		output.Error("live 和 latest 指向同一版本 (%s)，请先执行 deploy 部署新版本", liveVersion)
 		os.Exit(exitcode.ParamError)
 		return
 	}
 
-	// 7. 按顺序执行灰度策略
-	strategies := []CanaryStrategy{Canary10, Canary25, Canary50, Canary75}
-
-	for i, strategy := range strategies {
+	// 9. 按顺序执行灰度
+	totalSteps := len(steps) + 1 // 包括最后的 promote
+	for i, pct := range steps {
 		output.Separator()
-		output.Info("[%d/%d] 执行灰度策略: %s (%.0f%% 流量到新版本)", i+1, len(strategies), strategy, strategy.Weight()*100)
+		output.Info("[%d/%d] 执行灰度: %d%% 流量到新版本", i+1, totalSteps, pct)
 
-		exitCode = lambdaClient.ConfigureCanary(ctx, functionName, "live", liveVersion, latestVersion, strategy.Weight())
+		weight := float64(pct) / 100.0
+		exitCode = lambdaClient.ConfigureCanary(ctx, functionName, "live", liveVersion, latestVersion, weight)
 		if exitCode != exitcode.Success {
 			os.Exit(exitCode)
 			return
 		}
 
 		output.Success("灰度配置完成")
-		output.Info("流量分配: %.0f%% v%s, %.0f%% v%s", (1-strategy.Weight())*100, liveVersion, strategy.Weight()*100, latestVersion)
+		output.Info("流量分配: %d%% v%s, %d%% v%s", 100-pct, liveVersion, pct, latestVersion)
 
-		// 最后一个策略不需要等待
-		if i < len(strategies)-1 {
-			output.Info("等待 %v...", autoWait)
-			time.Sleep(autoWait)
-		}
+		output.Info("等待 %v...", autoWait)
+		time.Sleep(autoWait)
 	}
 
-	// 8. 执行 promote
+	// 10. 执行 promote
 	output.Separator()
-	output.Info("执行 promote，完成 100%% 切换...")
+	output.Info("[%d/%d] 执行 promote，完成 100%% 切换...", totalSteps, totalSteps)
 
 	// 更新 previous 别名
 	exitCode = lambdaClient.UpdateAlias(ctx, functionName, "previous", liveVersion)
@@ -141,7 +159,7 @@ func runAuto(cmd *cobra.Command, args []string) {
 	}
 	output.Success("live 别名已更新到版本 %s", latestVersion)
 
-	// 9. 输出结果
+	// 11. 输出结果
 	output.Separator()
 	output.Success("自动灰度发布完成!")
 	output.Info("")
@@ -149,7 +167,7 @@ func runAuto(cmd *cobra.Command, args []string) {
 	output.Info("  - previous: -> 版本 %s", liveVersion)
 	output.Info("  - live: 版本 %s -> 版本 %s (100%%)", liveVersion, latestVersion)
 	output.Info("")
-	output.Info("总耗时: %v", time.Duration(len(strategies)-1)*autoWait)
+	output.Info("总耗时: %v", time.Duration(len(steps))*autoWait)
 	output.Info("")
 	output.Info("如需回退: lad rollback --env %s", env)
 }

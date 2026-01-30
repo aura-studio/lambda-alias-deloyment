@@ -22,14 +22,16 @@
 
 ### canary 命令
 
-| 当前状态 | 策略 | 操作结果 | 说明 |
-|----------|------|----------|------|
-| 稳定态 | 任意 | ❌ 阻止 | live==latest，需先 deploy |
-| 待验证态 | canary10-100 | → 灰度态 | ✅ 正常流程 |
-| 待验证态 | canary0 | 无变化 | ✅ 无灰度可清除 |
-| 灰度态 | canary10-100 | 灰度态 | ✅ 调整灰度比例 |
-| 灰度态 | canary0 | → 待验证态 | ✅ 清除灰度配置 |
-| 回退态 | 任意 | ❌ 阻止 | live==latest，需先 deploy |
+| 当前状态 | 百分比 | 操作结果 | 说明 |
+|----------|--------|----------|------|
+| 稳定态 | 1-100 | ❌ 阻止 | live==latest，需先 deploy |
+| 稳定态 | 0 | 无变化 | ✅ 无灰度可清除 |
+| 待验证态 | 1-100 | → 灰度态 | ✅ 正常流程 |
+| 待验证态 | 0 | 无变化 | ✅ 无灰度可清除 |
+| 灰度态 | 1-100 | 灰度态 | ✅ 调整灰度比例 |
+| 灰度态 | 0 | → 待验证态 | ✅ 清除灰度配置 |
+| 回退态 | 1-100 | ❌ 阻止 | live==latest，需先 deploy |
+| 回退态 | 0 | 无变化 | ✅ 无灰度可清除 |
 
 ### promote 命令
 
@@ -63,11 +65,11 @@
 ### 已实现的保护
 
 1. **deploy 阻止活跃灰度**：防止在灰度过程中部署新版本
-2. **canary 检查版本差异**：live==latest 时阻止（canary0 除外）
+2. **canary 检查版本差异**：live==latest 时阻止（--percent 0 除外）
 3. **promote 幂等**：live==latest 时直接返回成功
 4. **rollback 幂等**：live==previous 时直接返回成功
 5. **rollback 更新 latest**：防止回退后 promote 又推上问题版本
-6. **canary100 警告**：提示用户使用 promote 更安全
+6. **--percent 100 警告**：提示用户使用 promote 更安全
 
 ### 误操作场景
 
@@ -83,7 +85,7 @@
 
 ```
 正常发布:
-  deploy → canary10 → canary25 → canary50 → canary75 → promote
+  deploy → canary --percent 10 → canary --percent 25 → canary --percent 50 → canary --percent 75 → promote
 
 快速发布:
   deploy → promote (跳过灰度，有警告)
@@ -95,5 +97,5 @@
   rollback → (排查问题) → deploy → ...
 
 取消灰度:
-  canary0 → (保持待验证态，可重新开始灰度)
+  canary --percent 0 → (保持待验证态，可重新开始灰度)
 ```

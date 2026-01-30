@@ -34,7 +34,7 @@
   │────────────────────────────┼──────────────────────────► │
   │                            │                            │
   │  6. lad canary             │                            │
-  │     --strategy canary10    │                            │
+  │     --percent 10           │                            │
   │─────────────────────────►  │                            │
   │                            │  配置 live 流量路由         │
   │                            │  90% → v1, 10% → v2        │
@@ -45,7 +45,7 @@
   │                            │                            │
   │  8a. 指标正常               │                            │
   │      lad canary            │                            │
-  │      --strategy canary50   │                            │
+  │      --percent 50          │                            │
   │─────────────────────────►  │                            │
   │                            │  50% → v1, 50% → v2        │
   │                            │──────────────────────────► │
@@ -76,10 +76,14 @@ sam build → sam deploy → lad deploy → lad promote
 ## 自动灰度流程
 
 ```
-sam build → sam deploy → lad deploy → lad auto --wait 5m
+sam build → sam deploy → lad deploy → lad auto
 ```
 
-自动按 10% → 25% → 50% → 75% → 100% 递进，每阶段等待指定时间。
+自动按 `--percent` 指定的步长递进（默认 10%），每阶段等待 `--wait` 指定的时间（默认 5m）。
+
+示例：
+- `lad auto` → 10% → 20% → ... → 90% → promote，每阶段等待 5 分钟
+- `lad auto --percent 25 --wait 1h` → 25% → 50% → 75% → promote，每阶段等待 1 小时
 
 ## 紧急回退流程
 
