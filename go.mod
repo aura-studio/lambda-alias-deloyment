@@ -2,8 +2,6 @@ module github.com/aura-studio/lad
 
 go 1.23
 
-toolchain go1.24.1
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
